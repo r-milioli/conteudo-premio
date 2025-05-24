@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    image: automacaodebaixocusto/conteudo-premio:latest
+    networks:
+      - network_public
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.content-hub.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.content-hub.entrypoints=websecure"
+        - "traefik.http.routers.content-hub.tls=true"
+        - "traefik.http.routers.content-hub.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.content-hub.loadbalancer.server.port=3000"
+        - "traefik.docker.network=network_public"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+
+networks:
+  network_public:
+    external: true
+    name: network_public
+
+volumes:
+  traefik-certificates: 
