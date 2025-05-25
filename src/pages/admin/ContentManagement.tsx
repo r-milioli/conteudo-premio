@@ -118,10 +118,32 @@ const mockContents: Content[] = [
 const ContentManagement = () => {
   const [contents, setContents] = useState(mockContents);
   const [isNewContentDialogOpen, setIsNewContentDialogOpen] = useState(false);
+  const [isEditContentDialogOpen, setIsEditContentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
 
   // Form para novo conteúdo
   const form = useForm<z.infer<typeof newContentSchema>>({
+    resolver: zodResolver(newContentSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      thumbnailUrl: "",
+      bannerImageUrl: "",
+      capturePageTitle: "",
+      capturePageDescription: "",
+      capturePageVideoUrl: "",
+      capturePageHtml: "",
+      deliveryPageTitle: "",
+      deliveryPageDescription: "",
+      deliveryPageVideoUrl: "",
+      deliveryPageHtml: "",
+      downloadLink: "",
+    },
+  });
+
+  // Form para edição de conteúdo
+  const editForm = useForm<z.infer<typeof newContentSchema>>({
     resolver: zodResolver(newContentSchema),
     defaultValues: {
       title: "",
@@ -180,7 +202,70 @@ const ContentManagement = () => {
   };
 
   const handleEdit = (id: number) => {
-    console.log("Editar conteúdo:", id);
+    const contentToEdit = contents.find(content => content.id === id);
+    if (contentToEdit) {
+      setSelectedContent(contentToEdit);
+      // Preenche o formulário com os dados do conteúdo selecionado
+      editForm.reset({
+        title: contentToEdit.title,
+        description: contentToEdit.description,
+        // Aqui você preencheria os outros campos com dados reais
+        // Por enquanto vamos usar strings vazias para os campos que não temos no mock
+        thumbnailUrl: "",
+        bannerImageUrl: "",
+        capturePageTitle: "",
+        capturePageDescription: "",
+        capturePageVideoUrl: "",
+        capturePageHtml: "",
+        deliveryPageTitle: "",
+        deliveryPageDescription: "",
+        deliveryPageVideoUrl: "",
+        deliveryPageHtml: "",
+        downloadLink: "",
+      });
+      setIsEditContentDialogOpen(true);
+    }
+  };
+
+  const onEditSubmit = async (values: z.infer<typeof newContentSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Simula uma chamada à API
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Atualiza o conteúdo na lista
+      if (selectedContent) {
+        setContents(contents.map(content => 
+          content.id === selectedContent.id 
+            ? { 
+                ...content, 
+                title: values.title,
+                description: values.description,
+                // Outros campos seriam atualizados aqui
+              }
+            : content
+        ));
+      }
+      
+      setIsEditContentDialogOpen(false);
+      editForm.reset();
+      setSelectedContent(null);
+      
+      toast({
+        title: "Sucesso",
+        description: "Conteúdo atualizado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar conteúdo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o conteúdo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -509,6 +594,238 @@ const ContentManagement = () => {
                     </>
                   ) : (
                     "Criar Conteúdo"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição de Conteúdo */}
+      <Dialog open={isEditContentDialogOpen} onOpenChange={setIsEditContentDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Editar Conteúdo</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do seu conteúdo digital.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
+                  <TabsTrigger value="capture">Página de Captura</TabsTrigger>
+                  <TabsTrigger value="delivery">Página de Entrega</TabsTrigger>
+                </TabsList>
+
+                {/* Aba de Informações Básicas */}
+                <TabsContent value="basic" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Guia Completo de Marketing Digital" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Descreva seu conteúdo em detalhes..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL da Miniatura</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/thumbnail.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem pequena para listagem</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="bannerImageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Banner</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/banner.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem grande para cabeçalho</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Aba da Página de Captura */}
+                <TabsContent value="capture" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="capturePageTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título da Página</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Acesse o Guia Completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="capturePageDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição da Página</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Descreva os benefícios do seu conteúdo..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="capturePageVideoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Vídeo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                          </FormControl>
+                          <FormDescription>Link do vídeo de apresentação (opcional)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Aba da Página de Entrega */}
+                <TabsContent value="delivery" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={editForm.control}
+                      name="deliveryPageTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título da Página</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Seu acesso foi liberado!" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="deliveryPageDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição da Página</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Instruções de como acessar o conteúdo..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="deliveryPageVideoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Vídeo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                          </FormControl>
+                          <FormDescription>Link do vídeo de boas-vindas (opcional)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="downloadLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link de Download</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/arquivo.pdf" {...field} />
+                          </FormControl>
+                          <FormDescription>Link direto para download do conteúdo</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditContentDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Atualizando...
+                    </>
+                  ) : (
+                    "Salvar Alterações"
                   )}
                 </Button>
               </DialogFooter>
