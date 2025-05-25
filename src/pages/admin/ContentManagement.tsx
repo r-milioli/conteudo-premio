@@ -12,8 +12,31 @@ import {
   ExternalLink,
   MoreHorizontal,
   Calendar,
-  User
+  User,
+  Loader2
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +46,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+
+// Schema para validação do formulário de novo conteúdo
+const newContentSchema = z.object({
+  title: z.string().min(3, "O título deve ter pelo menos 3 caracteres"),
+  description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
+  thumbnailUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  bannerImageUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  capturePageTitle: z.string().min(3, "O título da página de captura deve ter pelo menos 3 caracteres"),
+  capturePageDescription: z.string().min(10, "A descrição da página de captura deve ter pelo menos 10 caracteres"),
+  capturePageVideoUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  capturePageHtml: z.string().optional(),
+  deliveryPageTitle: z.string().min(3, "O título da página de entrega deve ter pelo menos 3 caracteres"),
+  deliveryPageDescription: z.string().min(10, "A descrição da página de entrega deve ter pelo menos 10 caracteres"),
+  deliveryPageVideoUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  deliveryPageHtml: z.string().optional(),
+  downloadLink: z.string().url("URL inválida").optional().or(z.literal("")),
+});
 
 interface Content {
   id: number;
@@ -70,6 +117,67 @@ const mockContents: Content[] = [
 
 const ContentManagement = () => {
   const [contents, setContents] = useState(mockContents);
+  const [isNewContentDialogOpen, setIsNewContentDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form para novo conteúdo
+  const form = useForm<z.infer<typeof newContentSchema>>({
+    resolver: zodResolver(newContentSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      thumbnailUrl: "",
+      bannerImageUrl: "",
+      capturePageTitle: "",
+      capturePageDescription: "",
+      capturePageVideoUrl: "",
+      capturePageHtml: "",
+      deliveryPageTitle: "",
+      deliveryPageDescription: "",
+      deliveryPageVideoUrl: "",
+      deliveryPageHtml: "",
+      downloadLink: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof newContentSchema>) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Simula uma chamada à API
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Adiciona o novo conteúdo à lista
+      const newContent: Content = {
+        id: contents.length + 1,
+        title: values.title,
+        description: values.description,
+        status: 'draft',
+        created_at: new Date().toLocaleDateString(),
+        downloads: 0,
+        accesses: 0,
+        slug: values.title.toLowerCase().replace(/ /g, "-"),
+      };
+      
+      setContents([...contents, newContent]);
+      setIsNewContentDialogOpen(false);
+      form.reset();
+      
+      toast({
+        title: "Sucesso",
+        description: "Conteúdo criado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao criar conteúdo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o conteúdo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleEdit = (id: number) => {
     console.log("Editar conteúdo:", id);
@@ -100,34 +208,32 @@ const ContentManagement = () => {
             Gerencie seus conteúdos digitais e páginas personalizadas.
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsNewContentDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Conteúdo
         </Button>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4">
         {contents.map((content) => (
           <Card key={content.id}>
             <CardHeader>
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{content.title}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {content.description}
-                  </CardDescription>
-                  <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle>{content.title}</CardTitle>
+                  <CardDescription>{content.description}</CardDescription>
+                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       {content.created_at}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Download className="h-4 w-4" />
-                      {content.downloads} downloads
-                    </div>
-                    <div className="flex items-center gap-1">
                       <User className="h-4 w-4" />
                       {content.accesses} acessos
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Download className="h-4 w-4" />
+                      {content.downloads} downloads
                     </div>
                   </div>
                 </div>
@@ -163,7 +269,7 @@ const ContentManagement = () => {
                         Página de Entrega
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => handleDelete(content.id)}
                         className="text-red-600"
                       >
@@ -178,6 +284,238 @@ const ContentManagement = () => {
           </Card>
         ))}
       </div>
+
+      {/* Modal de Novo Conteúdo */}
+      <Dialog open={isNewContentDialogOpen} onOpenChange={setIsNewContentDialogOpen}>
+        <DialogContent className="sm:max-w-[800px]">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Conteúdo</DialogTitle>
+            <DialogDescription>
+              Preencha as informações do seu novo conteúdo digital.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
+                  <TabsTrigger value="capture">Página de Captura</TabsTrigger>
+                  <TabsTrigger value="delivery">Página de Entrega</TabsTrigger>
+                </TabsList>
+
+                {/* Aba de Informações Básicas */}
+                <TabsContent value="basic" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Guia Completo de Marketing Digital" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Descreva seu conteúdo em detalhes..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="thumbnailUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL da Miniatura</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/thumbnail.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem pequena para listagem</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bannerImageUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Banner</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/banner.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem grande para cabeçalho</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Aba da Página de Captura */}
+                <TabsContent value="capture" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="capturePageTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título da Página</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Acesse o Guia Completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="capturePageDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição da Página</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Descreva os benefícios do seu conteúdo..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="capturePageVideoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Vídeo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                          </FormControl>
+                          <FormDescription>Link do vídeo de apresentação (opcional)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Aba da Página de Entrega */}
+                <TabsContent value="delivery" className="space-y-4 mt-4">
+                  <div className="grid grid-cols-1 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="deliveryPageTitle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Título da Página</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Seu acesso foi liberado!" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="deliveryPageDescription"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Descrição da Página</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Instruções de como acessar o conteúdo..."
+                              className="min-h-[100px]"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="deliveryPageVideoUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Vídeo</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                          </FormControl>
+                          <FormDescription>Link do vídeo de boas-vindas (opcional)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="downloadLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link de Download</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/arquivo.pdf" {...field} />
+                          </FormControl>
+                          <FormDescription>Link direto para download do conteúdo</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsNewContentDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    "Criar Conteúdo"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
