@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 // Layouts
 import Layout from "./components/layout/Layout";
 import AdminLayout from "./components/admin/AdminLayout";
+import AdminCheck from "./components/admin/AdminCheck";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -22,6 +22,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
+import InitialSetup from "./pages/admin/InitialSetup";
 import Dashboard from "./pages/admin/Dashboard";
 import ContentManagement from "./pages/admin/ContentManagement";
 import Reports from "./pages/admin/Reports";
@@ -49,12 +50,15 @@ const App = () => (
           </Route>
           
           {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="conteudos" element={<ContentManagement />} />
-            <Route path="relatorios" element={<Reports />} />
-            <Route path="configuracoes" element={<SiteSettings />} />
+          <Route path="/admin" element={<AdminCheck />}>
+            <Route path="setup" element={<InitialSetup />} />
+            <Route path="login" element={<AdminLogin />} />
+            <Route element={<AdminLayout />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="conteudos" element={<ContentManagement />} />
+              <Route path="relatorios" element={<Reports />} />
+              <Route path="configuracoes" element={<SiteSettings />} />
+            </Route>
           </Route>
           
           {/* 404 Route */}

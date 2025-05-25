@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
-const AdminLogin = () => {
+const InitialSetup = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,38 +20,50 @@ const AdminLogin = () => {
     e.preventDefault();
     setError("");
 
-    if (!email || !password) {
+    // Validações
+    if (!name || !email || !password || !confirmPassword) {
       setError("Por favor, preencha todos os campos");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao fazer login');
+        throw new Error(data.error || 'Erro ao criar administrador');
       }
 
-      localStorage.setItem("adminToken", data.token);
-      
       toast({
-        title: "Bem-vindo!",
-        description: "Login realizado com sucesso.",
+        title: "Sucesso!",
+        description: "Administrador criado com sucesso. Você será redirecionado para o login.",
       });
 
-      navigate('/admin/dashboard');
+      // Aguarda 2 segundos antes de redirecionar
+      setTimeout(() => {
+        navigate('/admin/login');
+      }, 2000);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'E-mail ou senha incorretos');
+      setError(error instanceof Error ? error.message : 'Erro ao criar administrador');
       setIsLoading(false);
     }
   };
@@ -59,18 +73,29 @@ const AdminLogin = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Conteúdo Premium</h1>
-          <h2 className="text-xl font-medium text-gray-600">Acesso Administrativo</h2>
+          <h2 className="text-xl font-medium text-gray-600">Configuração Inicial</h2>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle>Criar Administrador Master</CardTitle>
             <CardDescription>
-              Entre com suas credenciais para acessar o painel administrativo
+              Configure o administrador principal do sistema. Esta tela só aparecerá uma única vez.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Seu nome completo"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">E-mail</Label>
                 <Input
@@ -93,6 +118,17 @@ const AdminLogin = () => {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-md text-sm">
                   {error}
@@ -107,9 +143,9 @@ const AdminLogin = () => {
                 {isLoading ? (
                   <span className="flex items-center justify-center">
                     <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                    Entrando...
+                    Criando...
                   </span>
-                ) : "Entrar"}
+                ) : "Criar Administrador"}
               </Button>
             </form>
           </CardContent>
@@ -119,4 +155,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default InitialSetup; 

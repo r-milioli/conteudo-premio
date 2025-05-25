@@ -1,40 +1,39 @@
 version: '3.8'
 
 services:
-  conteudo-premio:
-    image: automacaodebaixocusto/conteudo-premio:latest
-    networks:
-      - network_public
-    deploy:
-      replicas: 1
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: on-failure
-      labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.content-hub.rule=Host(`premio.iacas.top`)"
-        - "traefik.http.routers.content-hub.entrypoints=websecure"
-        - "traefik.http.routers.content-hub.tls=true"
-        - "traefik.http.routers.content-hub.tls.certresolver=letsencryptresolver"
-        - "traefik.http.services.content-hub.loadbalancer.server.port=8080"
-        - "traefik.docker.network=network_public"
-        - "traefik.http.middlewares.content-hub-strip.stripprefix.prefixes=/"
-        - "traefik.http.routers.content-hub.middlewares=content-hub-strip@docker"
+  app:
+    build: .
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
-      - PORT=8080
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=131489152850082175195580
-      - DB_NAME=premio
+      - DB_PASSWORD=postgres
+      - DB_NAME=content_premium
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      - postgres
+    networks:
+      - app-network
 
-networks:
-  network_public:
-    external: true
-    name: network_public
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=content_premium
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
 volumes:
-  traefik-certificates: 
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge 
