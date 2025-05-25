@@ -66,11 +66,12 @@ const generalSettingsSchema = z.object({
   heroGradientTo: z.string().regex(/^#([A-Fa-f0-9]{6})$/, {
     message: "Deve ser um código de cor hexadecimal válido (ex: #0066CC)",
   }),
-  facebookUrl: z.string().url().optional().or(z.literal("")),
-  instagramUrl: z.string().url().optional().or(z.literal("")),
-  twitterUrl: z.string().url().optional().or(z.literal("")),
-  linkedinUrl: z.string().url().optional().or(z.literal("")),
-  youtubeUrl: z.string().url().optional().or(z.literal("")),
+  // Redes sociais - todas opcionais
+  facebookUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  instagramUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  twitterUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  linkedinUrl: z.string().url("URL inválida").optional().or(z.literal("")),
+  youtubeUrl: z.string().url("URL inválida").optional().or(z.literal(""))
 });
 
 const availableEvents = [

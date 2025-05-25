@@ -185,10 +185,20 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
         }
 
         // Validação de URLs
-        const urlFields = ['logoUrl', 'faviconUrl', 'facebookUrl', 'instagramUrl', 'twitterUrl', 'linkedinUrl', 'youtubeUrl'];
         const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
-        for (const field of urlFields) {
+
+        // Validação de URLs obrigatórias
+        const requiredUrlFields = ['logoUrl', 'faviconUrl'];
+        for (const field of requiredUrlFields) {
             if (req.body[field] && !urlRegex.test(req.body[field])) {
+                return res.status(400).json({ error: `URL inválida para o campo ${field}` });
+            }
+        }
+
+        // Validação de URLs de redes sociais (opcionais)
+        const socialUrlFields = ['facebookUrl', 'instagramUrl', 'twitterUrl', 'linkedinUrl', 'youtubeUrl'];
+        for (const field of socialUrlFields) {
+            if (req.body[field] && req.body[field] !== "" && !urlRegex.test(req.body[field])) {
                 return res.status(400).json({ error: `URL inválida para o campo ${field}` });
             }
         }
