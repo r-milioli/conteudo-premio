@@ -203,6 +203,38 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
             }
         }
 
+        // Validação dos campos de webhook
+        if (req.body.webhookUrl) {
+            if (!urlRegex.test(req.body.webhookUrl)) {
+                return res.status(400).json({ error: 'URL do webhook inválida' });
+            }
+        }
+
+        if (req.body.retryAttempts !== undefined) {
+            const retryAttempts = parseInt(req.body.retryAttempts);
+            if (isNaN(retryAttempts) || retryAttempts < 0 || retryAttempts > 10) {
+                return res.status(400).json({ error: 'O número de tentativas deve estar entre 0 e 10' });
+            }
+        }
+
+        if (req.body.timeout !== undefined) {
+            const timeout = parseInt(req.body.timeout);
+            if (isNaN(timeout) || timeout < 1 || timeout > 30) {
+                return res.status(400).json({ error: 'O timeout deve estar entre 1 e 30 segundos' });
+            }
+        }
+
+        if (req.body.enabledEvents) {
+            try {
+                const events = JSON.parse(req.body.enabledEvents);
+                if (!Array.isArray(events)) {
+                    return res.status(400).json({ error: 'O campo enabledEvents deve ser um array' });
+                }
+            } catch (error) {
+                return res.status(400).json({ error: 'Formato inválido para o campo enabledEvents' });
+            }
+        }
+
         // Validação opcional dos campos de checkout
         if (req.body.checkoutTitle && req.body.checkoutTitle.length < 5) {
             return res.status(400).json({ error: 'O título do checkout deve ter pelo menos 5 caracteres' });

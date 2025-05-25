@@ -127,8 +127,11 @@ const SiteSettings = () => {
           throw new Error('Erro ao carregar configurações');
         }
         const data = await response.json();
+        
+        // Atualiza formulário geral
         generalForm.reset(data);
-        // Atualiza também o formulário de checkout
+        
+        // Atualiza formulário de checkout
         checkoutForm.reset({
           checkoutTitle: data.checkoutTitle,
           checkoutDescription: data.checkoutDescription,
@@ -136,6 +139,15 @@ const SiteSettings = () => {
           successMessage: data.successMessage,
           merchantName: data.merchantName,
           merchantId: data.merchantId,
+        });
+
+        // Atualiza formulário de webhook
+        webhookForm.reset({
+          webhookUrl: data.webhookUrl || '',
+          secretKey: data.secretKey || '',
+          enabledEvents: JSON.parse(data.enabledEvents || '[]'),
+          retryAttempts: data.retryAttempts || 3,
+          timeout: data.timeout || 10,
         });
       } catch (error) {
         console.error('Erro ao carregar configurações:', error);
@@ -275,18 +287,64 @@ const SiteSettings = () => {
     setIsSubmitting(true);
     
     try {
-      // Implementar lógica para salvar configurações de webhook
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Obter token do localStorage para consistência
+      const token = localStorage.getItem('adminToken');
       
+      if (!token) {
+        throw new Error('Não autorizado. Por favor, faça login novamente.');
+      }
+
+      // Buscar configurações atuais
+      const settingsResponse = await fetch('/api/settings');
+      if (!settingsResponse.ok) {
+        throw new Error('Erro ao carregar configurações existentes');
+      }
+      const currentSettings = await settingsResponse.json();
+
+      // Converter array de eventos para string JSON para salvar no banco
+      const updatedSettings = {
+        ...currentSettings,
+        webhookUrl: values.webhookUrl,
+        secretKey: values.secretKey,
+        enabledEvents: JSON.stringify(values.enabledEvents),
+        retryAttempts: values.retryAttempts,
+        timeout: values.timeout
+      };
+
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedSettings),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao salvar configurações');
+      }
+
+      const data = await response.json();
+
       toast({
         title: "Sucesso",
-        description: "As configurações de webhook foram atualizadas.",
+        description: "As configurações de webhook foram atualizadas com sucesso.",
+      });
+
+      // Atualiza o formulário com os dados mais recentes
+      webhookForm.reset({
+        webhookUrl: data.webhookUrl,
+        secretKey: data.secretKey,
+        enabledEvents: JSON.parse(data.enabledEvents || '[]'),
+        retryAttempts: data.retryAttempts,
+        timeout: data.timeout
       });
     } catch (error) {
       console.error('Erro ao salvar configurações de webhook:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar as configurações de webhook.",
+        description: error instanceof Error ? error.message : "Não foi possível salvar as configurações de webhook.",
         variant: "destructive",
       });
     } finally {

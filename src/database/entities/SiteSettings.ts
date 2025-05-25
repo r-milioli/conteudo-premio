@@ -69,6 +69,22 @@ export class SiteSettings {
     @Column({ type: "varchar", nullable: true })
     merchantId: string;
 
+    // Campos de webhook
+    @Column({ type: "varchar" })
+    webhookUrl: string;
+
+    @Column({ type: "varchar" })
+    secretKey: string;
+
+    @Column({ type: "text" })
+    enabledEvents: string;
+
+    @Column({ type: "integer" })
+    retryAttempts: number;
+
+    @Column({ type: "integer" })
+    timeout: number;
+
     @CreateDateColumn({ type: "timestamp" })
     created_at: Date;
 
