@@ -36,12 +36,12 @@ const webhookSettingsSchema = z.object({
 
 // Schema for checkout page
 const checkoutPageSchema = z.object({
-  checkoutTitle: z.string().min(5),
-  checkoutDescription: z.string().min(10),
-  paymentButtonText: z.string().min(3),
-  successMessage: z.string().min(5),
-  merchantName: z.string().min(3),
-  merchantId: z.string().min(5),
+  checkoutTitle: z.string().min(5).optional().or(z.literal("")),
+  checkoutDescription: z.string().min(10).optional().or(z.literal("")),
+  paymentButtonText: z.string().min(3).optional().or(z.literal("")),
+  successMessage: z.string().min(5).optional().or(z.literal("")),
+  merchantName: z.string().min(3).optional().or(z.literal("")),
+  merchantId: z.string().min(5).optional().or(z.literal(""))
 });
 
 // Schema for general settings
@@ -127,6 +127,15 @@ const SiteSettings = () => {
         }
         const data = await response.json();
         generalForm.reset(data);
+        // Atualiza também o formulário de checkout
+        checkoutForm.reset({
+          checkoutTitle: data.checkoutTitle,
+          checkoutDescription: data.checkoutDescription,
+          paymentButtonText: data.paymentButtonText,
+          successMessage: data.successMessage,
+          merchantName: data.merchantName,
+          merchantId: data.merchantId,
+        });
       } catch (error) {
         console.error('Erro ao carregar configurações:', error);
         toast({
@@ -154,13 +163,26 @@ const SiteSettings = () => {
         throw new Error('Não autorizado. Por favor, faça login novamente.');
       }
 
+      // Buscar configurações atuais
+      const settingsResponse = await fetch('/api/settings');
+      if (!settingsResponse.ok) {
+        throw new Error('Erro ao carregar configurações existentes');
+      }
+      const currentSettings = await settingsResponse.json();
+
+      // Mesclar configurações atuais com as novas configurações gerais
+      const updatedSettings = {
+        ...currentSettings,
+        ...values
+      };
+
       const response = await fetch('/api/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(updatedSettings),
       });
 
       if (!response.ok) {
@@ -193,18 +215,54 @@ const SiteSettings = () => {
     setIsSubmitting(true);
     
     try {
-      // Implementar lógica para salvar configurações de checkout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Obter token do localStorage para consistência
+      const token = localStorage.getItem('adminToken');
       
+      if (!token) {
+        throw new Error('Não autorizado. Por favor, faça login novamente.');
+      }
+
+      // Buscar configurações atuais
+      const settingsResponse = await fetch('/api/settings');
+      if (!settingsResponse.ok) {
+        throw new Error('Erro ao carregar configurações existentes');
+      }
+      const currentSettings = await settingsResponse.json();
+
+      // Mesclar configurações atuais com as novas configurações de checkout
+      const updatedSettings = {
+        ...currentSettings,
+        ...values
+      };
+
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedSettings),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao salvar configurações');
+      }
+
+      const data = await response.json();
+
       toast({
         title: "Sucesso",
-        description: "As configurações de checkout foram atualizadas.",
+        description: "As configurações de checkout foram atualizadas com sucesso.",
       });
+
+      // Atualiza o formulário com os dados mais recentes
+      checkoutForm.reset(data);
     } catch (error) {
       console.error('Erro ao salvar configurações de checkout:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível salvar as configurações de checkout.",
+        description: error instanceof Error ? error.message : "Não foi possível salvar as configurações de checkout.",
         variant: "destructive",
       });
     } finally {

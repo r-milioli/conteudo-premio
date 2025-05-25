@@ -50,6 +50,25 @@ export class SiteSettings {
     @Column({ type: "text", nullable: true })
     youtubeUrl: string;
 
+    // Campos de checkout
+    @Column({ type: "varchar", nullable: true })
+    checkoutTitle: string;
+
+    @Column({ type: "text", nullable: true })
+    checkoutDescription: string;
+
+    @Column({ type: "varchar", nullable: true })
+    paymentButtonText: string;
+
+    @Column({ type: "varchar", nullable: true })
+    successMessage: string;
+
+    @Column({ type: "varchar", nullable: true })
+    merchantName: string;
+
+    @Column({ type: "varchar", nullable: true })
+    merchantId: string;
+
     @CreateDateColumn({ type: "timestamp" })
     created_at: Date;
 

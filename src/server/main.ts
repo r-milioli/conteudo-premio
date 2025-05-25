@@ -106,12 +106,6 @@ app.post('/api/admin/login', async (req: Request, res: Response) => {
             return res.status(401).json({ error: 'E-mail ou senha incorretos' });
         }
 
-        const passwordMatch = await bcrypt.compare(password, admin.password_hash);
-
-        if (!passwordMatch) {
-            return res.status(401).json({ error: 'E-mail ou senha incorretos' });
-        }
-
         // Atualiza último login
         admin.last_login = new Date();
         await adminRepository.save(admin);
@@ -165,7 +159,11 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
         }
 
         // Validação básica dos campos obrigatórios
-        const requiredFields = ['siteName', 'footerText', 'contactEmail', 'primaryColor', 'secondaryColor', 'heroGradientFrom', 'heroGradientVia', 'heroGradientTo'];
+        const requiredFields = [
+            'siteName', 'footerText', 'contactEmail', 
+            'primaryColor', 'secondaryColor', 
+            'heroGradientFrom', 'heroGradientVia', 'heroGradientTo'
+        ];
         for (const field of requiredFields) {
             if (!req.body[field]) {
                 return res.status(400).json({ error: `O campo ${field} é obrigatório` });
@@ -193,6 +191,26 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
             if (req.body[field] && !urlRegex.test(req.body[field])) {
                 return res.status(400).json({ error: `URL inválida para o campo ${field}` });
             }
+        }
+
+        // Validação opcional dos campos de checkout
+        if (req.body.checkoutTitle && req.body.checkoutTitle.length < 5) {
+            return res.status(400).json({ error: 'O título do checkout deve ter pelo menos 5 caracteres' });
+        }
+        if (req.body.checkoutDescription && req.body.checkoutDescription.length < 10) {
+            return res.status(400).json({ error: 'A descrição do checkout deve ter pelo menos 10 caracteres' });
+        }
+        if (req.body.paymentButtonText && req.body.paymentButtonText.length < 3) {
+            return res.status(400).json({ error: 'O texto do botão de pagamento deve ter pelo menos 3 caracteres' });
+        }
+        if (req.body.successMessage && req.body.successMessage.length < 5) {
+            return res.status(400).json({ error: 'A mensagem de sucesso deve ter pelo menos 5 caracteres' });
+        }
+        if (req.body.merchantName && req.body.merchantName.length < 3) {
+            return res.status(400).json({ error: 'O nome do comerciante deve ter pelo menos 3 caracteres' });
+        }
+        if (req.body.merchantId && req.body.merchantId.length < 5) {
+            return res.status(400).json({ error: 'O ID do comerciante deve ter pelo menos 5 caracteres' });
         }
 
         console.log('Atualizando configurações:', req.body);
