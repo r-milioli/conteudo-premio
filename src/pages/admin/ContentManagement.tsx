@@ -76,10 +76,23 @@ interface Content {
   title: string;
   description: string;
   status: 'published' | 'draft';
+  slug: string;
+  thumbnail_url: string | null;
+  banner_image_url: string | null;
+  capture_page_title: string | null;
+  capture_page_description: string | null;
+  capture_page_video_url: string | null;
+  capture_page_html: string | null;
+  delivery_page_title: string | null;
+  delivery_page_description: string | null;
+  delivery_page_video_url: string | null;
+  delivery_page_html: string | null;
+  download_link: string | null;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
   downloads: number;
   accesses: number;
-  slug: string;
 }
 
 const mockContents: Content[] = [
@@ -88,31 +101,70 @@ const mockContents: Content[] = [
     title: "Guia Completo de Edição de Vídeos",
     description: "Aprenda a editar vídeos como um profissional.",
     status: "published",
+    slug: "guia-completo-edicao-videos",
+    thumbnail_url: null,
+    banner_image_url: null,
+    capture_page_title: null,
+    capture_page_description: null,
+    capture_page_video_url: null,
+    capture_page_html: null,
+    delivery_page_title: null,
+    delivery_page_description: null,
+    delivery_page_video_url: null,
+    delivery_page_html: null,
+    download_link: null,
+    is_active: true,
     created_at: "15/05/2024",
+    updated_at: "15/05/2024",
     downloads: 325,
-    accesses: 1245,
-    slug: "guia-completo-edicao-videos"
+    accesses: 1245
   },
   {
     id: 2,
     title: "Estratégias de Marketing Digital",
     description: "As melhores estratégias para bombar seu negócio online.",
     status: "draft",
+    slug: "estrategias-marketing-digital",
+    thumbnail_url: null,
+    banner_image_url: null,
+    capture_page_title: null,
+    capture_page_description: null,
+    capture_page_video_url: null,
+    capture_page_html: null,
+    delivery_page_title: null,
+    delivery_page_description: null,
+    delivery_page_video_url: null,
+    delivery_page_html: null,
+    download_link: null,
+    is_active: true,
     created_at: "20/05/2024",
+    updated_at: "20/05/2024",
     downloads: 187,
-    accesses: 876,
-    slug: "estrategias-marketing-digital"
+    accesses: 876
   },
   {
     id: 3,
     title: "Como Criar um Podcast de Sucesso",
     description: "Dicas e truques para criar um podcast de sucesso.",
     status: "published",
+    slug: "como-criar-podcast-sucesso",
+    thumbnail_url: null,
+    banner_image_url: null,
+    capture_page_title: null,
+    capture_page_description: null,
+    capture_page_video_url: null,
+    capture_page_html: null,
+    delivery_page_title: null,
+    delivery_page_description: null,
+    delivery_page_video_url: null,
+    delivery_page_html: null,
+    download_link: null,
+    is_active: true,
     created_at: "25/05/2024",
+    updated_at: "25/05/2024",
     downloads: 452,
-    accesses: 1587,
-    slug: "como-criar-podcast-sucesso"
-  },
+    accesses: 1587
+  }
 ];
 
 const ContentManagement = () => {
@@ -175,10 +227,23 @@ const ContentManagement = () => {
         title: values.title,
         description: values.description,
         status: 'draft',
-        created_at: new Date().toLocaleDateString(),
-        downloads: 0,
-        accesses: 0,
         slug: values.title.toLowerCase().replace(/ /g, "-"),
+        thumbnail_url: values.thumbnailUrl || null,
+        banner_image_url: values.bannerImageUrl || null,
+        capture_page_title: values.capturePageTitle || null,
+        capture_page_description: values.capturePageDescription || null,
+        capture_page_video_url: values.capturePageVideoUrl || null,
+        capture_page_html: values.capturePageHtml || null,
+        delivery_page_title: values.deliveryPageTitle || null,
+        delivery_page_description: values.deliveryPageDescription || null,
+        delivery_page_video_url: values.deliveryPageVideoUrl || null,
+        delivery_page_html: values.deliveryPageHtml || null,
+        download_link: values.downloadLink || null,
+        is_active: true,
+        created_at: new Date().toLocaleDateString(),
+        updated_at: new Date().toLocaleDateString(),
+        downloads: 0,
+        accesses: 0
       };
       
       setContents([...contents, newContent]);
@@ -209,19 +274,17 @@ const ContentManagement = () => {
       editForm.reset({
         title: contentToEdit.title,
         description: contentToEdit.description,
-        // Aqui você preencheria os outros campos com dados reais
-        // Por enquanto vamos usar strings vazias para os campos que não temos no mock
-        thumbnailUrl: "",
-        bannerImageUrl: "",
-        capturePageTitle: "",
-        capturePageDescription: "",
-        capturePageVideoUrl: "",
-        capturePageHtml: "",
-        deliveryPageTitle: "",
-        deliveryPageDescription: "",
-        deliveryPageVideoUrl: "",
-        deliveryPageHtml: "",
-        downloadLink: "",
+        thumbnailUrl: contentToEdit.thumbnail_url || "",
+        bannerImageUrl: contentToEdit.banner_image_url || "",
+        capturePageTitle: contentToEdit.capture_page_title || "",
+        capturePageDescription: contentToEdit.capture_page_description || "",
+        capturePageVideoUrl: contentToEdit.capture_page_video_url || "",
+        capturePageHtml: contentToEdit.capture_page_html || "",
+        deliveryPageTitle: contentToEdit.delivery_page_title || "",
+        deliveryPageDescription: contentToEdit.delivery_page_description || "",
+        deliveryPageVideoUrl: contentToEdit.delivery_page_video_url || "",
+        deliveryPageHtml: contentToEdit.delivery_page_html || "",
+        downloadLink: contentToEdit.download_link || "",
       });
       setIsEditContentDialogOpen(true);
     }
@@ -239,10 +302,21 @@ const ContentManagement = () => {
         setContents(contents.map(content => 
           content.id === selectedContent.id 
             ? { 
-                ...content, 
+                ...content,
                 title: values.title,
                 description: values.description,
-                // Outros campos seriam atualizados aqui
+                thumbnail_url: values.thumbnailUrl || null,
+                banner_image_url: values.bannerImageUrl || null,
+                capture_page_title: values.capturePageTitle || null,
+                capture_page_description: values.capturePageDescription || null,
+                capture_page_video_url: values.capturePageVideoUrl || null,
+                capture_page_html: values.capturePageHtml || null,
+                delivery_page_title: values.deliveryPageTitle || null,
+                delivery_page_description: values.deliveryPageDescription || null,
+                delivery_page_video_url: values.deliveryPageVideoUrl || null,
+                delivery_page_html: values.deliveryPageHtml || null,
+                download_link: values.downloadLink || null,
+                updated_at: new Date().toLocaleDateString(),
               }
             : content
         ));
