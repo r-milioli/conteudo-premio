@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { config } from 'dotenv';
 import { AppDataSource } from '../database/data-source.js';
 import { Administrator } from '../database/entities/Administrator.js';
+import { SiteSettings } from '../database/entities/SiteSettings.js';
 import 'reflect-metadata';
 import path from 'path';
 import bcrypt from 'bcrypt';
@@ -25,6 +26,24 @@ AppDataSource.initialize()
 
 // Middleware
 app.use(express.json());
+
+// Middleware para verificar autenticação
+const authenticateToken = (req: Request, res: Response, next: Function) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token não fornecido' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err: any, user: any) => {
+        if (err) {
+            return res.status(403).json({ error: 'Token inválido' });
+        }
+        req.body.user = user;
+        next();
+    });
+};
 
 // Endpoint para verificar se existe admin
 app.get('/api/admin/check', async (req: Request, res: Response) => {
@@ -115,6 +134,81 @@ app.post('/api/admin/login', async (req: Request, res: Response) => {
     } catch (error) {
         console.error('Erro ao fazer login:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Endpoint para obter configurações do site
+app.get('/api/settings', async (req: Request, res: Response) => {
+    try {
+        const settingsRepository = AppDataSource.getRepository(SiteSettings);
+        const settings = await settingsRepository.findOne({ where: { id: 1 } });
+        
+        if (!settings) {
+            return res.status(404).json({ error: 'Configurações não encontradas' });
+        }
+
+        res.json(settings);
+    } catch (error) {
+        console.error('Erro ao buscar configurações:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Endpoint para atualizar configurações do site (requer autenticação)
+app.put('/api/settings', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const settingsRepository = AppDataSource.getRepository(SiteSettings);
+        let settings = await settingsRepository.findOne({ where: { id: 1 } });
+        
+        if (!settings) {
+            return res.status(404).json({ error: 'Configurações não encontradas' });
+        }
+
+        // Validação básica dos campos obrigatórios
+        const requiredFields = ['siteName', 'footerText', 'contactEmail', 'primaryColor', 'secondaryColor', 'heroGradientFrom', 'heroGradientVia', 'heroGradientTo'];
+        for (const field of requiredFields) {
+            if (!req.body[field]) {
+                return res.status(400).json({ error: `O campo ${field} é obrigatório` });
+            }
+        }
+
+        // Validação de email
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.contactEmail)) {
+            return res.status(400).json({ error: 'Email inválido' });
+        }
+
+        // Validação de cores hexadecimais
+        const colorFields = ['primaryColor', 'secondaryColor', 'heroGradientFrom', 'heroGradientVia', 'heroGradientTo'];
+        const hexColorRegex = /^#([A-Fa-f0-9]{6})$/;
+        for (const field of colorFields) {
+            if (!hexColorRegex.test(req.body[field])) {
+                return res.status(400).json({ error: `Cor inválida para o campo ${field}` });
+            }
+        }
+
+        // Validação de URLs
+        const urlFields = ['logoUrl', 'faviconUrl', 'facebookUrl', 'instagramUrl', 'twitterUrl', 'linkedinUrl', 'youtubeUrl'];
+        const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+        for (const field of urlFields) {
+            if (req.body[field] && !urlRegex.test(req.body[field])) {
+                return res.status(400).json({ error: `URL inválida para o campo ${field}` });
+            }
+        }
+
+        console.log('Atualizando configurações:', req.body);
+
+        // Atualiza as configurações com os novos valores
+        settingsRepository.merge(settings, req.body);
+        
+        // Salva as alterações
+        settings = await settingsRepository.save(settings);
+        
+        console.log('Configurações atualizadas com sucesso:', settings);
+        
+        res.json(settings);
+    } catch (error) {
+        console.error('Erro ao atualizar configurações:', error);
+        res.status(500).json({ error: 'Erro interno do servidor ao atualizar configurações' });
     }
 });
 

@@ -2,7 +2,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --include=dev
+RUN npm install --include=dev && \
+    npm install zustand@4.5.2 --save
 
 # Estágio 2: Compilação
 FROM node:20-alpine AS builder
@@ -27,8 +28,9 @@ COPY --from=builder /app/tsconfig*.json ./
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 COPY server-package.json ./dist/server/package.json
 
-# Instala as dependências de produção e TypeORM
+# Instala as dependências de produção, TypeORM e ferramentas de migração
 RUN npm install --omit=dev && \
+    npm install -g ts-node@10.9.2 typeorm@0.3.20 && \
     npm install typeorm@0.3.20 pg reflect-metadata ts-node @types/node && \
     npm cache clean --force && \
     # Remove arquivos temporários
@@ -47,7 +49,8 @@ USER nodejs
 
 # Define variáveis de ambiente padrão
 ENV PORT=8080 \
-    NODE_ENV=production
+    NODE_ENV=production \
+    NODE_OPTIONS="--loader ts-node/esm --experimental-specifier-resolution=node"
 
 # Expõe a porta da aplicação
 EXPOSE 8080

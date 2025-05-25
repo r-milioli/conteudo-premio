@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,6 +23,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Settings, CreditCard, Webhook, Trash2, Plus } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 // Schema for webhook settings
 const webhookSettingsSchema = z.object({
@@ -72,21 +73,19 @@ const generalSettingsSchema = z.object({
   youtubeUrl: z.string().url().optional().or(z.literal("")),
 });
 
-// Available webhook events
 const availableEvents = [
-  { id: "donation.completed", label: "Doação Concluída", description: "Quando uma doação é processada com sucesso" },
-  { id: "donation.failed", label: "Doação Falhada", description: "Quando uma doação falha no processamento" },
-  { id: "donation.pending", label: "Doação Pendente", description: "Quando uma doação está pendente de confirmação" },
-  { id: "user.registered", label: "Usuário Cadastrado", description: "Quando um novo usuário se cadastra" },
-  { id: "content.downloaded", label: "Conteúdo Baixado", description: "Quando um conteúdo é baixado pelo usuário" },
-  { id: "content.accessed", label: "Conteúdo Acessado", description: "Quando um usuário acessa um conteúdo premium" },
-  { id: "email.captured", label: "Email Capturado", description: "Quando um email é capturado na página de cadastro" },
-  { id: "form.submitted", label: "Formulário Enviado", description: "Quando um formulário de contato é enviado" },
+  { id: "payment_success", label: "Pagamento Aprovado" },
+  { id: "payment_failure", label: "Pagamento Recusado" },
+  { id: "access_granted", label: "Acesso Liberado" },
+  { id: "content_created", label: "Conteúdo Criado" },
+  { id: "content_updated", label: "Conteúdo Atualizado" },
 ];
 
 const SiteSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { token } = useAuth();
 
   // Webhook form
   const webhookForm = useForm<z.infer<typeof webhookSettingsSchema>>({
@@ -116,39 +115,133 @@ const SiteSettings = () => {
   // General settings form
   const generalForm = useForm<z.infer<typeof generalSettingsSchema>>({
     resolver: zodResolver(generalSettingsSchema),
-    defaultValues: {
-      siteName: "Conteúdo Premium",
-      logoUrl: "",
-      faviconUrl: "",
-      footerText: "© 2025 Conteúdo Premium. Todos os direitos reservados.",
-      contactEmail: "contato@conteudopremium.com",
-      primaryColor: "#4361ee",
-      secondaryColor: "#3f37c9",
-      heroGradientFrom: "#dbeafe",
-      heroGradientVia: "#faf5ff",
-      heroGradientTo: "#e0e7ff",
-      facebookUrl: "",
-      instagramUrl: "",
-      twitterUrl: "",
-      linkedinUrl: "",
-      youtubeUrl: "",
-    },
   });
 
+  // Carrega as configurações ao montar o componente
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        if (!response.ok) {
+          throw new Error('Erro ao carregar configurações');
+        }
+        const data = await response.json();
+        generalForm.reset(data);
+      } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar as configurações.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
   // Handle form submission
-  const onSubmit = async (values: any) => {
+  const onSubmitGeneral = async (values: z.infer<typeof generalSettingsSchema>) => {
     setIsSubmitting(true);
     
-    // Mock API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Obter token do localStorage para consistência
+      const token = localStorage.getItem('adminToken');
       
+      if (!token) {
+        throw new Error('Não autorizado. Por favor, faça login novamente.');
+      }
+
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao salvar configurações');
+      }
+
+      const data = await response.json();
+
       toast({
-        title: "Configurações salvas",
+        title: "Sucesso",
         description: "As configurações foram atualizadas com sucesso.",
       });
-    }, 1500);
+
+      // Atualiza o formulário com os dados mais recentes
+      generalForm.reset(data);
+    } catch (error) {
+      console.error('Erro ao salvar configurações:', error);
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Não foi possível salvar as configurações.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const onSubmitCheckout = async (values: z.infer<typeof checkoutPageSchema>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Implementar lógica para salvar configurações de checkout
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Sucesso",
+        description: "As configurações de checkout foram atualizadas.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar configurações de checkout:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar as configurações de checkout.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const onSubmitWebhook = async (values: z.infer<typeof webhookSettingsSchema>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Implementar lógica para salvar configurações de webhook
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Sucesso",
+        description: "As configurações de webhook foram atualizadas.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar configurações de webhook:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar as configurações de webhook.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -183,7 +276,7 @@ const SiteSettings = () => {
         {/* General Settings Tab */}
         <TabsContent value="general" className="space-y-4">
           <Form {...generalForm}>
-            <form onSubmit={generalForm.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={generalForm.handleSubmit(onSubmitGeneral)} className="space-y-6">
               {/* Informações Básicas */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Informações Básicas</h3>
@@ -479,7 +572,7 @@ const SiteSettings = () => {
         {/* Checkout Tab */}
         <TabsContent value="checkout" className="space-y-4">
           <Form {...checkoutForm}>
-            <form onSubmit={checkoutForm.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={checkoutForm.handleSubmit(onSubmitCheckout)} className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={checkoutForm.control}
@@ -590,7 +683,7 @@ const SiteSettings = () => {
         {/* Webhooks Tab */}
         <TabsContent value="webhooks" className="space-y-4">
           <Form {...webhookForm}>
-            <form onSubmit={webhookForm.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={webhookForm.handleSubmit(onSubmitWebhook)} className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Configuração do Webhook</h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -696,69 +789,36 @@ const SiteSettings = () => {
                             key={event.id}
                             control={webhookForm.control}
                             name="enabledEvents"
-                            render={({ field }) => {
-                              return (
-                                <FormItem
-                                  key={event.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3"
-                                >
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(event.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([...field.value, event.id])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== event.id
-                                              )
+                            render={({ field }) => (
+                              <FormItem
+                                key={event.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(event.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, event.id])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== event.id
                                             )
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel className="font-medium">
-                                      {event.label}
-                                    </FormLabel>
-                                    <FormDescription className="text-xs">
-                                      {event.description}
-                                    </FormDescription>
-                                  </div>
-                                </FormItem>
-                              )
-                            }}
+                                          )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {event.label}
+                                </FormLabel>
+                              </FormItem>
+                            )}
                           />
                         ))}
                       </div>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Exemplo de Payload */}
-              <div className="space-y-4 border-t pt-6">
-                <h3 className="text-lg font-medium">Exemplo de Payload</h3>
-                <div className="bg-gray-50 rounded-md p-4">
-                  <pre className="text-xs text-gray-700 overflow-x-auto">
-{`{
-  "event": "donation.completed",
-  "timestamp": "2025-01-24T10:30:00Z",
-  "data": {
-    "donation_id": "12345",
-    "amount": 50.00,
-    "currency": "BRL",
-    "user_email": "usuario@exemplo.com",
-    "content_id": "67890",
-    "content_title": "Ebook Premium"
-  },
-  "webhook_id": "webhook_123"
-}`}
-                  </pre>
-                </div>
-                <FormDescription>
-                  Este é um exemplo de como os dados serão enviados para seu webhook
-                </FormDescription>
               </div>
 
               <Button type="submit" disabled={isSubmitting}>
@@ -768,7 +828,7 @@ const SiteSettings = () => {
                     Salvando...
                   </>
                 ) : (
-                  "Salvar Configurações de Webhook"
+                  "Salvar Configurações"
                 )}
               </Button>
             </form>

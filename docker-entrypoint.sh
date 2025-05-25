@@ -21,7 +21,8 @@ const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   synchronize: false,
-  logging: process.env.NODE_ENV === "development",
+  logging: ["query", "error", "schema", "warn", "info", "log"],
+  logger: "advanced-console",
   entities: ["./dist/database/entities/*.js"],
   migrations: ["./dist/database/migrations/*.js"]
 });
@@ -29,11 +30,19 @@ const AppDataSource = new DataSource({
 export default AppDataSource;
 EOF
 
-# Executa as migrations do TypeORM
+# Executa as migrations do TypeORM com logging detalhado
 echo "Executando migrações do banco de dados..."
 cd /app && \
 NODE_OPTIONS="--no-warnings --loader ts-node/esm --experimental-specifier-resolution=node" \
-node --loader ts-node/esm ./node_modules/typeorm/cli.js migration:run -d ./typeorm-config.mjs
+DEBUG=typeorm:* node --loader ts-node/esm ./node_modules/typeorm/cli.js migration:run -d ./typeorm-config.mjs
+
+# Verifica se as migrações foram bem-sucedidas
+if [ $? -eq 0 ]; then
+    echo "Migrações executadas com sucesso!"
+else
+    echo "Erro ao executar migrações!"
+    exit 1
+fi
 
 # Inicia a aplicação
 echo "Iniciando aplicação..."

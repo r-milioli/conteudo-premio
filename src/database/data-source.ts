@@ -9,7 +9,8 @@ export const AppDataSource = new DataSource({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     synchronize: false,
-    logging: process.env.NODE_ENV === "development",
+    logging: ["query", "error", "schema", "warn", "info", "log"],
+    logger: "advanced-console",
     entities: ["./dist/database/entities/*.js"],
     migrations: ["./dist/database/migrations/*.js"],
 });
