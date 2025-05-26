@@ -47,9 +47,25 @@ const DeliveryPage = () => {
   }, [slug, location.state, navigate]);
 
   // Handle download click
-  const handleDownload = () => {
-    setShowThankYou(true);
-    window.open(content.downloadLink, "_blank");
+  const handleDownload = async () => {
+    try {
+      // Registra o download
+      const response = await fetch(`/api/public/contents/${slug}/download`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao registrar download');
+      }
+
+      setShowThankYou(true);
+      window.open(content.downloadLink, "_blank");
+    } catch (error) {
+      console.error('Erro ao registrar download:', error);
+      // Ainda abre o download mesmo se falhar o registro
+      setShowThankYou(true);
+      window.open(content.downloadLink, "_blank");
+    }
   };
 
   if (loading) {

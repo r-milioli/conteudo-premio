@@ -621,6 +621,36 @@ app.post('/api/public/contents/:slug/access', async (req: Request, res: Response
     }
 });
 
+// Registrar download do conteúdo
+app.post('/api/public/contents/:slug/download', async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ 
+            where: { 
+                slug,
+                status: 'published',
+                is_active: true 
+            } 
+        });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        // Incrementa o contador de downloads do conteúdo
+        await contentRepository.increment({ id: content.id }, 'download_count', 1);
+        
+        res.status(200).json({ 
+            message: 'Download registrado com sucesso',
+            content_id: content.id 
+        });
+    } catch (error) {
+        console.error('Erro ao registrar download:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Buscar dados para relatórios
 app.get('/api/admin/reports', async (req: Request, res: Response) => {
   try {
@@ -687,6 +717,38 @@ app.get('/api/admin/reports', async (req: Request, res: Response) => {
       details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
+});
+
+// Listar conteúdos públicos
+app.get('/api/public/contents', async (req: Request, res: Response) => {
+    try {
+        const contentRepository = AppDataSource.getRepository(Content);
+        const contents = await contentRepository.find({
+            where: { 
+                status: 'published',
+                is_active: true 
+            },
+            select: [
+                'id',
+                'title',
+                'description',
+                'slug',
+                'thumbnail_url',
+                'banner_image_url',
+                'access_count',
+                'download_count'
+            ],
+            order: {
+                created_at: 'DESC'
+            }
+        });
+        
+        console.log('Conteúdos encontrados:', contents);
+        res.json(contents);
+    } catch (error) {
+        console.error('Erro ao buscar conteúdos:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
 });
 
 // Serve static files from the React app

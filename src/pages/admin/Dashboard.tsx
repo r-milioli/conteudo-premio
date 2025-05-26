@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Users, Download, DollarSign, Percent, BarChart2 } from "lucide-react";
+import { Users, Download, DollarSign, Percent } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,67 +14,157 @@ import {
   Legend,
   ResponsiveContainer
 } from "recharts";
+import { useState, useEffect } from "react";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-// Dados simulados para os gráficos
-const accessData = [
-  { name: "Jan", total: 125 },
-  { name: "Fev", total: 348 },
-  { name: "Mar", total: 217 },
-  { name: "Abr", total: 423 },
-  { name: "Mai", total: 529 },
-  { name: "Jun", total: 632 },
-  { name: "Jul", total: 782 },
-];
+interface DashboardStats {
+  totalDownloads: number;
+  paidDownloads: number;
+  totalRevenue: number;
+  totalAccesses: number;
+  conversionRate: number;
+}
 
-const downloadData = [
-  { name: "Jan", total: 45 },
-  { name: "Fev", total: 132 },
-  { name: "Mar", total: 97 },
-  { name: "Abr", total: 213 },
-  { name: "Mai", total: 245 },
-  { name: "Jun", total: 321 },
-  { name: "Jul", total: 412 },
-];
+interface ChartData {
+  name: string;
+  total: number;
+}
 
-const revenueData = [
-  { name: "Jan", total: 125 },
-  { name: "Fev", total: 467 },
-  { name: "Mar", total: 329 },
-  { name: "Abr", total: 642 },
-  { name: "Mai", total: 765 },
-  { name: "Jun", total: 897 },
-  { name: "Jul", total: 1205 },
-];
-
-// Dados de conteúdos recentes
-const recentContents = [
-  {
-    id: 1,
-    title: "Como Gravar Vídeos Profissionais",
-    status: "published",
-    date: "12/05/2023",
-    downloads: 245,
-    revenue: 1245.50
-  },
-  {
-    id: 2,
-    title: "Edição de Vídeo para Iniciantes",
-    status: "published",
-    date: "24/06/2023",
-    downloads: 187,
-    revenue: 932.25
-  },
-  {
-    id: 3,
-    title: "Como Criar Thumbnails Atraentes",
-    status: "published",
-    date: "07/07/2023",
-    downloads: 153,
-    revenue: 765.00
-  }
-];
+interface RecentContent {
+  id: number;
+  title: string;
+  status: string;
+  date: string;
+  downloads: number;
+  revenue: number;
+}
 
 const Dashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalDownloads: 0,
+    paidDownloads: 0,
+    totalRevenue: 0,
+    totalAccesses: 0,
+    conversionRate: 0
+  });
+  const [accessData, setAccessData] = useState<ChartData[]>([]);
+  const [downloadData, setDownloadData] = useState<ChartData[]>([]);
+  const [revenueData, setRevenueData] = useState<ChartData[]>([]);
+  const [recentContents, setRecentContents] = useState<RecentContent[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Buscar dados dos últimos 7 meses
+        const sevenMonthsAgo = subMonths(new Date(), 7);
+        const startDate = format(startOfMonth(sevenMonthsAgo), 'yyyy-MM-dd');
+        const endDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+
+        const response = await fetch(`/api/admin/reports?startDate=${startDate}&endDate=${endDate}`);
+        
+        if (!response.ok) {
+          throw new Error('Erro ao carregar dados do dashboard');
+        }
+
+        const data = await response.json();
+
+        // Processar dados para estatísticas
+        const totalDownloads = data.statistics.totalDownloads;
+        const paidDownloads = data.statistics.paidDownloads;
+        const totalRevenue = data.statistics.totalRevenue;
+        const conversionRate = (paidDownloads / totalDownloads * 100) || 0;
+
+        setStats({
+          totalDownloads,
+          paidDownloads,
+          totalRevenue,
+          totalAccesses: totalDownloads * 2, // Estimativa de acessos
+          conversionRate
+        });
+
+        // Processar dados para gráficos
+        const monthlyData = new Map();
+        const monthlyRevenue = new Map();
+        const monthlyDownloads = new Map();
+
+        // Inicializar os últimos 7 meses com 0
+        for (let i = 0; i < 7; i++) {
+          const date = subMonths(new Date(), i);
+          const monthKey = format(date, 'MMM', { locale: ptBR });
+          monthlyData.set(monthKey, 0);
+          monthlyRevenue.set(monthKey, 0);
+          monthlyDownloads.set(monthKey, 0);
+        }
+
+        // Preencher com dados reais
+        data.downloads.forEach((access: any) => {
+          const monthKey = format(new Date(access.data_acesso), 'MMM', { locale: ptBR });
+          monthlyData.set(monthKey, (monthlyData.get(monthKey) || 0) + 1);
+          monthlyRevenue.set(monthKey, (monthlyRevenue.get(monthKey) || 0) + access.valor_contribuido);
+          monthlyDownloads.set(monthKey, (monthlyDownloads.get(monthKey) || 0) + 1);
+        });
+
+        // Converter para arrays para os gráficos
+        setAccessData(Array.from(monthlyData.entries()).map(([name, total]) => ({ name, total })).reverse());
+        setDownloadData(Array.from(monthlyDownloads.entries()).map(([name, total]) => ({ name, total })).reverse());
+        setRevenueData(Array.from(monthlyRevenue.entries()).map(([name, total]) => ({ name, total })).reverse());
+
+        // Processar conteúdos recentes
+        const contentsMap = new Map();
+        data.downloads.forEach((access: any) => {
+          if (!contentsMap.has(access.conteudo_id)) {
+            contentsMap.set(access.conteudo_id, {
+              id: access.conteudo_id,
+              title: access.conteudo_titulo,
+              status: 'published',
+              date: format(new Date(access.data_acesso), 'dd/MM/yyyy'),
+              downloads: 0,
+              revenue: 0
+            });
+          }
+          const content = contentsMap.get(access.conteudo_id);
+          content.downloads += 1;
+          content.revenue += access.valor_contribuido;
+        });
+
+        setRecentContents(Array.from(contentsMap.values())
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 3));
+
+      } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+        setError(error instanceof Error ? error.message : 'Erro ao carregar dados');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <span className="ml-3">Carregando dados...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 sm:space-y-8 p-4 sm:p-0">
       <div>
@@ -94,10 +183,7 @@ const Dashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">3,056</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% em relação ao último mês
-            </p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalAccesses}</div>
           </CardContent>
         </Card>
         <Card>
@@ -108,10 +194,7 @@ const Dashboard = () => {
             <Download className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">1,465</div>
-            <p className="text-xs text-muted-foreground">
-              +15.2% em relação ao último mês
-            </p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalDownloads}</div>
           </CardContent>
         </Card>
         <Card>
@@ -122,10 +205,7 @@ const Dashboard = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">R$ 4.325,78</div>
-            <p className="text-xs text-muted-foreground">
-              +12.5% em relação ao último mês
-            </p>
+            <div className="text-xl sm:text-2xl font-bold">R$ {stats.totalRevenue.toFixed(2)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -136,10 +216,7 @@ const Dashboard = () => {
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">47.9%</div>
-            <p className="text-xs text-muted-foreground">
-              +5.1% em relação ao último mês
-            </p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.conversionRate.toFixed(1)}%</div>
           </CardContent>
         </Card>
       </div>
