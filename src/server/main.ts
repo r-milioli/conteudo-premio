@@ -7,6 +7,7 @@ import 'reflect-metadata';
 import path from 'path';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { Content } from '../database/entities/Content.js';
 
 // Load environment variables
 config();
@@ -269,6 +270,125 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
     } catch (error) {
         console.error('Erro ao atualizar configurações:', error);
         res.status(500).json({ error: 'Erro interno do servidor ao atualizar configurações' });
+    }
+});
+
+// Endpoints de Conteúdo
+
+// Listar todos os conteúdos
+app.get('/api/contents', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const contentRepository = AppDataSource.getRepository(Content);
+        const contents = await contentRepository.find({
+            order: {
+                created_at: 'DESC'
+            }
+        });
+        
+        res.json(contents);
+    } catch (error) {
+        console.error('Erro ao buscar conteúdos:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Criar novo conteúdo
+app.post('/api/contents', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const {
+            title,
+            description,
+            thumbnailUrl,
+            bannerImageUrl,
+            capturePageTitle,
+            capturePageDescription,
+            capturePageVideoUrl,
+            capturePageHtml,
+            deliveryPageTitle,
+            deliveryPageDescription,
+            deliveryPageVideoUrl,
+            deliveryPageHtml,
+            downloadLink
+        } = req.body;
+
+        const contentRepository = AppDataSource.getRepository(Content);
+        
+        // Gera o slug a partir do título
+        const slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Remove caracteres especiais
+            .replace(/\s+/g, '-') // Substitui espaços por hífens
+            .replace(/-+/g, '-'); // Remove hífens duplicados
+
+        const content = contentRepository.create({
+            title,
+            description,
+            slug,
+            thumbnail_url: thumbnailUrl,
+            banner_image_url: bannerImageUrl,
+            capture_page_title: capturePageTitle,
+            capture_page_description: capturePageDescription,
+            capture_page_video_url: capturePageVideoUrl,
+            capture_page_html: capturePageHtml,
+            delivery_page_title: deliveryPageTitle,
+            delivery_page_description: deliveryPageDescription,
+            delivery_page_video_url: deliveryPageVideoUrl,
+            delivery_page_html: deliveryPageHtml,
+            download_link: downloadLink,
+            is_active: true
+        });
+
+        await contentRepository.save(content);
+        
+        res.status(201).json(content);
+    } catch (error) {
+        console.error('Erro ao criar conteúdo:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Atualizar conteúdo
+app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ where: { id: parseInt(id) } });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        const updatedContent = {
+            ...content,
+            ...req.body,
+            updated_at: new Date()
+        };
+
+        await contentRepository.save(updatedContent);
+        
+        res.json(updatedContent);
+    } catch (error) {
+        console.error('Erro ao atualizar conteúdo:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Excluir conteúdo
+app.delete('/api/contents/:id', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ where: { id: parseInt(id) } });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        await contentRepository.remove(content);
+        
+        res.status(204).send();
+    } catch (error) {
+        console.error('Erro ao excluir conteúdo:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 

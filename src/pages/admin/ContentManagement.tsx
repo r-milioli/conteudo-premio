@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -95,84 +95,45 @@ interface Content {
   accesses: number;
 }
 
-const mockContents: Content[] = [
-  {
-    id: 1,
-    title: "Guia Completo de Edição de Vídeos",
-    description: "Aprenda a editar vídeos como um profissional.",
-    status: "published",
-    slug: "guia-completo-edicao-videos",
-    thumbnail_url: null,
-    banner_image_url: null,
-    capture_page_title: null,
-    capture_page_description: null,
-    capture_page_video_url: null,
-    capture_page_html: null,
-    delivery_page_title: null,
-    delivery_page_description: null,
-    delivery_page_video_url: null,
-    delivery_page_html: null,
-    download_link: null,
-    is_active: true,
-    created_at: "15/05/2024",
-    updated_at: "15/05/2024",
-    downloads: 325,
-    accesses: 1245
-  },
-  {
-    id: 2,
-    title: "Estratégias de Marketing Digital",
-    description: "As melhores estratégias para bombar seu negócio online.",
-    status: "draft",
-    slug: "estrategias-marketing-digital",
-    thumbnail_url: null,
-    banner_image_url: null,
-    capture_page_title: null,
-    capture_page_description: null,
-    capture_page_video_url: null,
-    capture_page_html: null,
-    delivery_page_title: null,
-    delivery_page_description: null,
-    delivery_page_video_url: null,
-    delivery_page_html: null,
-    download_link: null,
-    is_active: true,
-    created_at: "20/05/2024",
-    updated_at: "20/05/2024",
-    downloads: 187,
-    accesses: 876
-  },
-  {
-    id: 3,
-    title: "Como Criar um Podcast de Sucesso",
-    description: "Dicas e truques para criar um podcast de sucesso.",
-    status: "published",
-    slug: "como-criar-podcast-sucesso",
-    thumbnail_url: null,
-    banner_image_url: null,
-    capture_page_title: null,
-    capture_page_description: null,
-    capture_page_video_url: null,
-    capture_page_html: null,
-    delivery_page_title: null,
-    delivery_page_description: null,
-    delivery_page_video_url: null,
-    delivery_page_html: null,
-    download_link: null,
-    is_active: true,
-    created_at: "25/05/2024",
-    updated_at: "25/05/2024",
-    downloads: 452,
-    accesses: 1587
-  }
-];
-
 const ContentManagement = () => {
-  const [contents, setContents] = useState(mockContents);
+  const [contents, setContents] = useState<Content[]>([]);
   const [isNewContentDialogOpen, setIsNewContentDialogOpen] = useState(false);
   const [isEditContentDialogOpen, setIsEditContentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+
+  // Carregar conteúdos ao montar o componente
+  useEffect(() => {
+    const fetchContents = async () => {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const response = await fetch('/api/contents', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao carregar conteúdos');
+        }
+
+        const data = await response.json();
+        setContents(data);
+      } catch (error) {
+        console.error('Erro ao carregar conteúdos:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os conteúdos.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContents();
+  }, []);
 
   // Form para novo conteúdo
   const form = useForm<z.infer<typeof newContentSchema>>({
@@ -218,35 +179,22 @@ const ContentManagement = () => {
     try {
       setIsSubmitting(true);
       
-      // Simula uma chamada à API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Adiciona o novo conteúdo à lista
-      const newContent: Content = {
-        id: contents.length + 1,
-        title: values.title,
-        description: values.description,
-        status: 'draft',
-        slug: values.title.toLowerCase().replace(/ /g, "-"),
-        thumbnail_url: values.thumbnailUrl || null,
-        banner_image_url: values.bannerImageUrl || null,
-        capture_page_title: values.capturePageTitle || null,
-        capture_page_description: values.capturePageDescription || null,
-        capture_page_video_url: values.capturePageVideoUrl || null,
-        capture_page_html: values.capturePageHtml || null,
-        delivery_page_title: values.deliveryPageTitle || null,
-        delivery_page_description: values.deliveryPageDescription || null,
-        delivery_page_video_url: values.deliveryPageVideoUrl || null,
-        delivery_page_html: values.deliveryPageHtml || null,
-        download_link: values.downloadLink || null,
-        is_active: true,
-        created_at: new Date().toLocaleDateString(),
-        updated_at: new Date().toLocaleDateString(),
-        downloads: 0,
-        accesses: 0
-      };
-      
-      setContents([...contents, newContent]);
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/contents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar conteúdo');
+      }
+
+      const newContent = await response.json();
+      setContents([newContent, ...contents]);
       setIsNewContentDialogOpen(false);
       form.reset();
       
@@ -294,33 +242,26 @@ const ContentManagement = () => {
     try {
       setIsSubmitting(true);
       
-      // Simula uma chamada à API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Atualiza o conteúdo na lista
-      if (selectedContent) {
-        setContents(contents.map(content => 
-          content.id === selectedContent.id 
-            ? { 
-                ...content,
-                title: values.title,
-                description: values.description,
-                thumbnail_url: values.thumbnailUrl || null,
-                banner_image_url: values.bannerImageUrl || null,
-                capture_page_title: values.capturePageTitle || null,
-                capture_page_description: values.capturePageDescription || null,
-                capture_page_video_url: values.capturePageVideoUrl || null,
-                capture_page_html: values.capturePageHtml || null,
-                delivery_page_title: values.deliveryPageTitle || null,
-                delivery_page_description: values.deliveryPageDescription || null,
-                delivery_page_video_url: values.deliveryPageVideoUrl || null,
-                delivery_page_html: values.deliveryPageHtml || null,
-                download_link: values.downloadLink || null,
-                updated_at: new Date().toLocaleDateString(),
-              }
-            : content
-        ));
+      if (!selectedContent) return;
+
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/contents/${selectedContent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(values),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar conteúdo');
       }
+
+      const updatedContent = await response.json();
+      setContents(contents.map(content => 
+        content.id === selectedContent.id ? updatedContent : content
+      ));
       
       setIsEditContentDialogOpen(false);
       editForm.reset();
@@ -342,8 +283,34 @@ const ContentManagement = () => {
     }
   };
 
-  const handleDelete = (id: number) => {
-    setContents(contents.filter(content => content.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/contents/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir conteúdo');
+      }
+
+      setContents(contents.filter(content => content.id !== id));
+      
+      toast({
+        title: "Sucesso",
+        description: "Conteúdo excluído com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir conteúdo:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o conteúdo.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleViewContent = (slug: string) => {
@@ -373,76 +340,87 @@ const ContentManagement = () => {
         </Button>
       </div>
 
-      <div className="grid gap-4">
-        {contents.map((content) => (
-          <Card key={content.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <CardTitle>{content.title}</CardTitle>
-                  <CardDescription>{content.description}</CardDescription>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {content.created_at}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      {content.accesses} acessos
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Download className="h-4 w-4" />
-                      {content.downloads} downloads
+      {isLoading ? (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : contents.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">Nenhum conteúdo encontrado.</p>
+          <p className="text-gray-500 text-sm">Clique em "Novo Conteúdo" para começar.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {contents.map((content) => (
+            <Card key={content.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle>{content.title}</CardTitle>
+                    <CardDescription>{content.description}</CardDescription>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {content.created_at}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        {content.accesses} acessos
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Download className="h-4 w-4" />
+                        {content.downloads} downloads
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={content.status === 'published' ? 'default' : 'secondary'}>
+                      {content.status === 'published' ? 'Publicado' : 'Rascunho'}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Abrir menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEdit(content.id)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Visualizar Páginas</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleViewContent(content.slug)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Página de Conteúdo
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewDonation(content.slug)}>
+                          <Gift className="mr-2 h-4 w-4" />
+                          Página de Doação
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Página de Entrega
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(content.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={content.status === 'published' ? 'default' : 'secondary'}>
-                    {content.status === 'published' ? 'Publicado' : 'Rascunho'}
-                  </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleEdit(content.id)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Visualizar Páginas</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleViewContent(content.slug)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Página de Conteúdo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewDonation(content.slug)}>
-                        <Gift className="mr-2 h-4 w-4" />
-                        Página de Doação
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Página de Entrega
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(content.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Modal de Novo Conteúdo */}
       <Dialog open={isNewContentDialogOpen} onOpenChange={setIsNewContentDialogOpen}>
