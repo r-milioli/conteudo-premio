@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from "typeorm";
 import { Content } from "./Content.js";
 
 @Entity("content_access")
@@ -10,6 +10,7 @@ export class ContentAccess {
     user_email: string;
 
     @ManyToOne(() => Content)
+    @JoinColumn({ name: "content_id" })
     content: Content;
 
     @Column()

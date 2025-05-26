@@ -8,6 +8,7 @@ import path from 'path';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Content } from '../database/entities/Content.js';
+import { ContentAccess } from '../database/entities/ContentAccess.js';
 
 // Load environment variables
 config();
@@ -531,6 +532,62 @@ app.get('/api/public/contents/:slug/delivery', async (req: Request, res: Respons
         });
     } catch (error) {
         console.error('Erro ao buscar dados da página de entrega:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Registrar acesso ao conteúdo
+app.post('/api/public/contents/:slug/access', async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+        const { email, contribution_amount = 0, payment_id = null, payment_status = null } = req.body;
+
+        // Validação básica dos campos obrigatórios
+        if (!email) {
+            return res.status(400).json({ error: 'O campo email é obrigatório' });
+        }
+
+        // Validação de email
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Email inválido' });
+        }
+
+        // Busca o conteúdo
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ 
+            where: { 
+                slug,
+                status: 'published',
+                is_active: true 
+            } 
+        });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        // Registra o acesso
+        const contentAccessRepository = AppDataSource.getRepository(ContentAccess);
+        const access = contentAccessRepository.create({
+            user_email: email,
+            content,
+            access_type: contribution_amount > 0 ? 'paid' : 'free',
+            contribution_amount: contribution_amount,
+            payment_id: payment_id,
+            payment_status: payment_status
+        });
+
+        await contentAccessRepository.save(access);
+
+        // Incrementa o contador de acessos do conteúdo
+        await contentRepository.increment({ id: content.id }, 'access_count', 1);
+        
+        res.status(201).json({ 
+            message: 'Acesso registrado com sucesso',
+            content_id: content.id 
+        });
+    } catch (error) {
+        console.error('Erro ao registrar acesso:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });

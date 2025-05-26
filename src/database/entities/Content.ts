@@ -54,6 +54,12 @@ export class Content {
     @Column({ type: "boolean", default: true })
     is_active: boolean;
 
+    @Column({ type: "integer", default: 0 })
+    access_count: number;
+
+    @Column({ type: "integer", default: 0 })
+    download_count: number;
+
     @OneToMany("ContentAdditionalLink", "content")
     additional_links: ContentAdditionalLink[];
 

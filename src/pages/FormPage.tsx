@@ -93,21 +93,46 @@ const FormPage = () => {
   const onInitialSubmit = async (values: z.infer<typeof initialFormSchema>) => {
     const contribuicao = parseFloat(values.contribuicao.replace(",", "."));
     
-    if (contribuicao > 0) {
-      setShowCheckout(true);
-    } else {
-      setIsSubmitting(true);
-      
-      setTimeout(() => {
-        setIsSubmitting(false);
-        navigate(`/entrega/${slug}`, { 
-          state: { 
-            email: values.email,
-            contribuicao: 0,
-            status: "gratuito"
-          } 
-        });
-      }, 1500);
+    try {
+      // Registra o acesso
+      const response = await fetch(`/api/public/contents/${slug}/access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: values.email,
+          contribution_amount: contribuicao
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao registrar acesso');
+      }
+
+      if (contribuicao > 0) {
+        setShowCheckout(true);
+      } else {
+        setIsSubmitting(true);
+        
+        setTimeout(() => {
+          setIsSubmitting(false);
+          navigate(`/entrega/${slug}`, { 
+            state: { 
+              email: values.email,
+              contribuicao: 0,
+              status: "gratuito"
+            } 
+          });
+        }, 1500);
+      }
+    } catch (error) {
+      console.error('Erro ao registrar acesso:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar seu acesso. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -142,6 +167,20 @@ const FormPage = () => {
       const response = await mp.createPayment(paymentData);
       
       if (response.status === "approved") {
+        // Atualiza o registro de acesso com as informações do pagamento
+        await fetch(`/api/public/contents/${slug}/access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: initialForm.getValues("email"),
+            contribution_amount: parseFloat(initialForm.getValues("contribuicao").replace(",", ".")),
+            payment_id: response.id,
+            payment_status: response.status
+          }),
+        });
+
         navigate(`/entrega/${slug}`, { 
           state: { 
             email: initialForm.getValues("email"),
