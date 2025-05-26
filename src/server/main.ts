@@ -392,6 +392,35 @@ app.delete('/api/contents/:id', authenticateToken, async (req: Request, res: Res
     }
 });
 
+// Atualizar status do conteúdo
+app.put('/api/contents/:id/status', authenticateToken, async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['draft', 'published'].includes(status)) {
+            return res.status(400).json({ error: 'Status inválido' });
+        }
+
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ where: { id: parseInt(id) } });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        content.status = status;
+        content.updated_at = new Date();
+
+        await contentRepository.save(content);
+        
+        res.json(content);
+    } catch (error) {
+        console.error('Erro ao atualizar status do conteúdo:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 

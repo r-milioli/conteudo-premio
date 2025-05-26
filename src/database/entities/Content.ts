@@ -15,6 +15,9 @@ export class Content {
     @Column({ type: "text", nullable: true })
     description: string;
 
+    @Column({ type: "varchar", default: "draft" })
+    status: string;
+
     @Column({ type: "text", nullable: true })
     thumbnail_url: string;
 

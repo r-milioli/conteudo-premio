@@ -325,6 +325,46 @@ const ContentManagement = () => {
     window.open(`/entrega/${slug}`, '_blank');
   };
 
+  const handleToggleStatus = async (id: number) => {
+    try {
+      const content = contents.find(c => c.id === id);
+      if (!content) return;
+
+      const newStatus = content.status === 'published' ? 'draft' : 'published';
+      
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/contents/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar status do conteúdo');
+      }
+
+      const updatedContent = await response.json();
+      setContents(contents.map(c => 
+        c.id === id ? { ...c, status: newStatus } : c
+      ));
+      
+      toast({
+        title: "Sucesso",
+        description: `Conteúdo ${newStatus === 'published' ? 'publicado' : 'movido para rascunhos'} com sucesso!`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status do conteúdo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -389,6 +429,10 @@ const ContentManagement = () => {
                         <DropdownMenuItem onClick={() => handleEdit(content.id)}>
                           <Edit className="mr-2 h-4 w-4" />
                           Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleStatus(content.id)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          {content.status === 'published' ? 'Tornar Rascunho' : 'Publicar'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Visualizar Páginas</DropdownMenuLabel>
