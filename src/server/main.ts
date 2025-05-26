@@ -489,6 +489,52 @@ app.get('/api/public/contents/:slug/form', async (req: Request, res: Response) =
     }
 });
 
+// Buscar dados do conteúdo para a página de entrega
+app.get('/api/public/contents/:slug/delivery', async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ 
+            where: { 
+                slug,
+                status: 'published',
+                is_active: true 
+            },
+            select: [
+                'id',
+                'title',
+                'description',
+                'slug',
+                'thumbnail_url',
+                'banner_image_url',
+                'delivery_page_title',
+                'delivery_page_description',
+                'delivery_page_video_url',
+                'delivery_page_html',
+                'download_link'
+            ]
+        });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        res.json({
+            id: content.id,
+            titulo: content.title,
+            descricao: content.description,
+            slug: content.slug,
+            thumbnail: content.thumbnail_url,
+            videoUrl: content.delivery_page_video_url,
+            deliveryHtml: content.delivery_page_html,
+            downloadLink: content.download_link
+        });
+    } catch (error) {
+        console.error('Erro ao buscar dados da página de entrega:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
