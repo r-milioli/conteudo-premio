@@ -350,7 +350,7 @@ const ContentManagement = () => {
           <p className="text-gray-500 text-sm">Clique em "Novo Conteúdo" para começar.</p>
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1">
           {contents.map((content) => (
             <Card key={content.id}>
               <CardHeader>
