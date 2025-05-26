@@ -351,6 +351,22 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
 app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const {
+            title,
+            description,
+            thumbnailUrl,
+            bannerImageUrl,
+            capturePageTitle,
+            capturePageDescription,
+            capturePageVideoUrl,
+            capturePageHtml,
+            deliveryPageTitle,
+            deliveryPageDescription,
+            deliveryPageVideoUrl,
+            deliveryPageHtml,
+            downloadLink
+        } = req.body;
+
         const contentRepository = AppDataSource.getRepository(Content);
         const content = await contentRepository.findOne({ where: { id: parseInt(id) } });
         
@@ -358,9 +374,22 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             return res.status(404).json({ error: 'Conteúdo não encontrado' });
         }
 
+        // Mapeia corretamente os campos de camelCase para snake_case
         const updatedContent = {
             ...content,
-            ...req.body,
+            title,
+            description,
+            thumbnail_url: thumbnailUrl,
+            banner_image_url: bannerImageUrl,
+            capture_page_title: capturePageTitle,
+            capture_page_description: capturePageDescription,
+            capture_page_video_url: capturePageVideoUrl,
+            capture_page_html: capturePageHtml,
+            delivery_page_title: deliveryPageTitle,
+            delivery_page_description: deliveryPageDescription,
+            delivery_page_video_url: deliveryPageVideoUrl,
+            delivery_page_html: deliveryPageHtml,
+            download_link: downloadLink,
             updated_at: new Date()
         };
 
