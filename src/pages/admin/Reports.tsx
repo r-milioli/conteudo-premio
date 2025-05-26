@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -10,154 +9,112 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, FileDown } from "lucide-react";
+import { Calendar as CalendarIcon, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Mock data for demonstration
-const mockDownloads = [
-  {
-    id: 1,
-    conteudo_id: 1,
-    conteudo_titulo: "Como Gravar Vídeos Profissionais",
-    email: "joao@example.com",
-    valor_contribuido: 15.0,
-    status_pagamento: "aprovado",
-    data_acesso: "2023-07-15T10:30:00Z",
-  },
-  {
-    id: 2,
-    conteudo_id: 1,
-    conteudo_titulo: "Como Gravar Vídeos Profissionais",
-    email: "maria@example.com",
-    valor_contribuido: 0,
-    status_pagamento: "gratuito",
-    data_acesso: "2023-07-16T14:45:00Z",
-  },
-  {
-    id: 3,
-    conteudo_id: 2,
-    conteudo_titulo: "Edição de Vídeo para Iniciantes",
-    email: "pedro@example.com",
-    valor_contribuido: 25.0,
-    status_pagamento: "aprovado",
-    data_acesso: "2023-07-17T09:15:00Z",
-  },
-  {
-    id: 4,
-    conteudo_id: 3,
-    conteudo_titulo: "Como Criar Thumbnails Atraentes",
-    email: "ana@example.com",
-    valor_contribuido: 10.0,
-    status_pagamento: "aprovado",
-    data_acesso: "2023-07-18T16:20:00Z",
-  },
-  {
-    id: 5,
-    conteudo_id: 2,
-    conteudo_titulo: "Edição de Vídeo para Iniciantes",
-    email: "lucas@example.com",
-    valor_contribuido: 0,
-    status_pagamento: "gratuito",
-    data_acesso: "2023-07-19T11:10:00Z",
-  },
-];
+interface Download {
+  id: number;
+  conteudo_id: number;
+  conteudo_titulo: string;
+  email: string;
+  valor_contribuido: number;
+  status_pagamento: string;
+  data_acesso: string;
+}
 
-const mockContacts = [
-  {
-    id: 1,
-    nome: "Carlos Souza",
-    email: "carlos@example.com",
-    assunto: "Dúvida sobre download",
-    mensagem: "Olá, estou tendo problemas para acessar o material após o pagamento. Poderia me ajudar?",
-    data_envio: "2023-07-10T08:45:00Z",
-  },
-  {
-    id: 2,
-    nome: "Mariana Santos",
-    email: "mariana@example.com",
-    assunto: "Proposta de parceria",
-    mensagem: "Gostaria de propor uma parceria para divulgação dos seus materiais no meu canal.",
-    data_envio: "2023-07-12T14:30:00Z",
-  },
-  {
-    id: 3,
-    nome: "Rafael Lima",
-    email: "rafael@example.com",
-    assunto: "Problema com pagamento",
-    mensagem: "Realizei o pagamento, mas não recebi o link para download. O que devo fazer?",
-    data_envio: "2023-07-15T16:20:00Z",
-  },
-];
+interface Statistics {
+  totalDownloads: number;
+  paidDownloads: number;
+  totalRevenue: number;
+}
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState("downloads");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-
-  // Filter downloads based on search term and date filter
-  const filteredDownloads = mockDownloads.filter((download) => {
-    const matchesSearch =
-      download.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      download.conteudo_titulo.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesDate = dateFilter
-      ? format(new Date(download.data_acesso), "yyyy-MM-dd") ===
-        format(dateFilter, "yyyy-MM-dd")
-      : true;
-
-    return matchesSearch && matchesDate;
+  const [downloads, setDownloads] = useState<Download[]>([]);
+  const [statistics, setStatistics] = useState<Statistics>({
+    totalDownloads: 0,
+    paidDownloads: 0,
+    totalRevenue: 0
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter contacts based on search term and date filter
-  const filteredContacts = mockContacts.filter((contact) => {
-    const matchesSearch =
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.assunto.toLowerCase().includes(searchTerm.toLowerCase());
+  const fetchReportData = async () => {
+    try {
+      console.log('Iniciando busca de dados...');
+      setLoading(true);
+      setError(null);
+      
+      let url = '/api/admin/reports?';
+      
+      if (searchTerm) {
+        url += `search=${encodeURIComponent(searchTerm)}&`;
+      }
+      
+      if (dateFilter) {
+        const startDate = format(dateFilter, 'yyyy-MM-dd');
+        const endDate = format(dateFilter, 'yyyy-MM-dd 23:59:59');
+        url += `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      }
 
-    const matchesDate = dateFilter
-      ? format(new Date(contact.data_envio), "yyyy-MM-dd") ===
-        format(dateFilter, "yyyy-MM-dd")
-      : true;
+      console.log('Fazendo requisição para:', url);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao buscar dados');
+      }
 
-    return matchesSearch && matchesDate;
-  });
+      const data = await response.json();
+      console.log('Dados recebidos:', data);
 
-  // Calculate download statistics
-  const totalDownloads = filteredDownloads.length;
-  const paidDownloads = filteredDownloads.filter(
-    (download) => download.status_pagamento === "aprovado"
-  ).length;
-  const totalRevenue = filteredDownloads.reduce(
-    (sum, download) => sum + download.valor_contribuido,
-    0
-  );
+      if (!data || typeof data !== 'object') {
+        throw new Error('Dados inválidos recebidos do servidor');
+      }
 
-  // Export data as CSV
+      setDownloads(Array.isArray(data.downloads) ? data.downloads : []);
+      setStatistics({
+        totalDownloads: data.statistics?.totalDownloads || 0,
+        paidDownloads: data.statistics?.paidDownloads || 0,
+        totalRevenue: data.statistics?.totalRevenue || 0
+      });
+    } catch (error) {
+      console.error('Erro ao buscar relatórios:', error);
+      setError(error instanceof Error ? error.message : 'Erro ao carregar os dados');
+      setDownloads([]);
+      setStatistics({
+        totalDownloads: 0,
+        paidDownloads: 0,
+        totalRevenue: 0
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log('Effect executado - buscando dados...');
+    fetchReportData();
+  }, [searchTerm, dateFilter]);
+
   const exportCSV = () => {
-    const exportData = activeTab === "downloads" ? filteredDownloads : filteredContacts;
-    const header =
-      activeTab === "downloads"
-        ? "ID,Conteúdo,Email,Valor Contribuído,Status,Data\n"
-        : "ID,Nome,Email,Assunto,Mensagem,Data\n";
+    if (!downloads.length) return;
+
+    const header = "ID,Conteúdo,Email,Valor Contribuído,Status,Data\n";
     
     const csvContent = header +
-      exportData.map(row => {
-        if (activeTab === "downloads") {
-          const download = row as typeof filteredDownloads[0];
-          return `${download.id},"${download.conteudo_titulo}",${download.email},${download.valor_contribuido},${download.status_pagamento},"${format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}"`;
-        } else {
-          const contact = row as typeof filteredContacts[0];
-          return `${contact.id},"${contact.nome}",${contact.email},"${contact.assunto}","${contact.mensagem}","${format(new Date(contact.data_envio), "dd/MM/yyyy HH:mm")}"`;
-        }
+      downloads.map(download => {
+        return `${download.id},"${download.conteudo_titulo}",${download.email},${download.valor_contribuido},${download.status_pagamento},"${format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}"`;
       }).join("\n");
     
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `${activeTab}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    link.setAttribute("download", `downloads_${format(new Date(), "yyyy-MM-dd")}.csv`);
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -169,6 +126,7 @@ const Reports = () => {
     setDateFilter(undefined);
   };
 
+  // Renderização do componente
   return (
     <div className="space-y-6">
       <div>
@@ -176,6 +134,14 @@ const Reports = () => {
         <p className="text-gray-600">
           Visualize relatórios de downloads e contatos.
         </p>
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchReportData} className="mt-2">
+              Tentar novamente
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="downloads" value={activeTab} onValueChange={setActiveTab}>
@@ -187,15 +153,16 @@ const Reports = () => {
         <div className="mt-4 mb-6 flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[200px]">
             <Input
-              placeholder="Buscar por email, título ou assunto..."
+              placeholder={activeTab === 'downloads' ? "Buscar por email ou título..." : "Buscar por email..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={loading}
             />
           </div>
           <div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={loading}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateFilter ? format(dateFilter, "dd/MM/yyyy") : "Selecionar data"}
                 </Button>
@@ -210,106 +177,136 @@ const Reports = () => {
               </PopoverContent>
             </Popover>
           </div>
-          <Button variant="outline" onClick={clearFilters}>
+          <Button variant="outline" onClick={clearFilters} disabled={loading}>
             Limpar Filtros
           </Button>
-          <Button variant="outline" onClick={exportCSV}>
+          <Button variant="outline" onClick={exportCSV} disabled={loading || !downloads.length}>
             <FileDown className="mr-2 h-4 w-4" />
             Exportar CSV
           </Button>
         </div>
 
-        <TabsContent value="downloads" className="space-y-4">
+        <TabsContent value="downloads">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-lg border p-3 text-center">
               <p className="text-sm font-medium text-muted-foreground">Total de Downloads</p>
-              <p className="text-2xl font-bold">{totalDownloads}</p>
+              <p className="text-2xl font-bold">{statistics.totalDownloads}</p>
             </div>
             <div className="rounded-lg border p-3 text-center">
               <p className="text-sm font-medium text-muted-foreground">Downloads Pagos</p>
-              <p className="text-2xl font-bold">{paidDownloads}</p>
+              <p className="text-2xl font-bold">{statistics.paidDownloads}</p>
             </div>
             <div className="rounded-lg border p-3 text-center">
               <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
-              <p className="text-2xl font-bold">R$ {totalRevenue.toFixed(2)}</p>
+              <p className="text-2xl font-bold">R$ {Number(statistics.totalRevenue || 0).toFixed(2)}</p>
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Conteúdo</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDownloads.map((download) => (
-                  <TableRow key={download.id}>
-                    <TableCell>{download.id}</TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
-                      {download.conteudo_titulo}
-                    </TableCell>
-                    <TableCell>{download.email}</TableCell>
-                    <TableCell>
-                      {download.valor_contribuido > 0
-                        ? `R$ ${download.valor_contribuido.toFixed(2)}`
-                        : "Gratuito"}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs ${
-                          download.status_pagamento === "aprovado"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <span className="ml-3">Carregando dados...</span>
+            </div>
+          ) : downloads.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Nenhum download encontrado
+            </div>
+          ) : (
+            <div className="mt-6 overflow-hidden border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Conteúdo</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {downloads.map((download) => (
+                    <TableRow key={download.id}>
+                      <TableCell>{download.id}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
+                        {download.conteudo_titulo}
+                      </TableCell>
+                      <TableCell>{download.email}</TableCell>
+                      <TableCell>
+                        {download.valor_contribuido > 0
+                          ? `R$ ${download.valor_contribuido.toFixed(2)}`
+                          : "Gratuito"}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block px-2 py-1 rounded-full text-xs ${
+                            download.status_pagamento === "aprovado"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="contacts" className="space-y-4">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Assunto</TableHead>
-                  <TableHead>Mensagem</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>{contact.nome}</TableCell>
-                    <TableCell>{contact.email}</TableCell>
-                    <TableCell>{contact.assunto}</TableCell>
-                    <TableCell className="max-w-[300px] truncate" title={contact.mensagem}>
-                      {contact.mensagem}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(contact.data_envio), "dd/MM/yyyy HH:mm")}
-                    </TableCell>
+        <TabsContent value="contacts">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              <span className="ml-3">Carregando dados...</span>
+            </div>
+          ) : downloads.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Nenhum contato encontrado
+            </div>
+          ) : (
+            <div className="mt-6 overflow-hidden border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Conteúdo</TableHead>
+                    <TableHead>Tipo de Acesso</TableHead>
+                    <TableHead>Data</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {downloads.map((download) => (
+                    <TableRow key={download.id}>
+                      <TableCell>{download.email}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
+                        {download.conteudo_titulo}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-block px-2 py-1 rounded-full text-xs ${
+                            download.status_pagamento === "aprovado"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

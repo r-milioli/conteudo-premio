@@ -592,6 +592,74 @@ app.post('/api/public/contents/:slug/access', async (req: Request, res: Response
     }
 });
 
+// Buscar dados para relatórios
+app.get('/api/admin/reports', async (req: Request, res: Response) => {
+  try {
+    console.log('Iniciando busca de relatórios');
+    const { startDate, endDate, search } = req.query;
+    
+    const contentAccessRepository = AppDataSource.getRepository(ContentAccess);
+
+    // Query base
+    const queryBuilder = contentAccessRepository
+      .createQueryBuilder('access')
+      .leftJoinAndSelect('access.content', 'content')
+      .orderBy('access.created_at', 'DESC');
+
+    // Aplicar filtros se existirem
+    if (startDate && endDate) {
+      queryBuilder.andWhere('access.created_at BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate
+      });
+    }
+
+    if (search) {
+      queryBuilder.andWhere('(access.user_email LIKE :search OR content.title LIKE :search)', {
+        search: `%${search}%`
+      });
+    }
+
+    // Buscar os dados
+    const accesses = await queryBuilder.getMany();
+    console.log('Acessos encontrados:', accesses.length);
+
+    // Formatar dados para resposta
+    const formattedAccesses = accesses.map(access => ({
+      id: access.id,
+      conteudo_id: access.content?.id || 0,
+      conteudo_titulo: access.content?.title || 'Conteúdo não encontrado',
+      email: access.user_email,
+      valor_contribuido: Number(access.contribution_amount) || 0,
+      status_pagamento: Number(access.contribution_amount) > 0 ? 'aprovado' : 'gratuito',
+      data_acesso: access.created_at
+    }));
+
+    // Calcular estatísticas
+    const totalDownloads = formattedAccesses.length;
+    const paidDownloads = formattedAccesses.filter(access => access.valor_contribuido > 0).length;
+    const totalRevenue = Number(formattedAccesses.reduce((sum, access) => sum + access.valor_contribuido, 0).toFixed(2));
+
+    const response = {
+      downloads: formattedAccesses,
+      statistics: {
+        totalDownloads,
+        paidDownloads,
+        totalRevenue
+      }
+    };
+
+    console.log('Resposta formatada:', response);
+    res.json(response);
+  } catch (error) {
+    console.error('Erro ao buscar relatórios:', error);
+    res.status(500).json({ 
+      error: 'Erro ao buscar dados dos relatórios',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
