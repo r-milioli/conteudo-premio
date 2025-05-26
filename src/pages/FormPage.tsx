@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,37 +16,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useMercadoPago } from "@/hooks/useMercadoPago";
-
-// Mock content data - this would be fetched from an API in a real app
-const mockContents = [
-  {
-    id: 1,
-    titulo: "Como Gravar Vídeos Profissionais",
-    slug: "como-gravar-videos-profissionais",
-    descricao: "Aprenda técnicas profissionais para gravação de vídeos.",
-    thumbnail: "https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=2670&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    formHtml: "<h3>Este material vai transformar seus vídeos</h3><p>Tenha acesso a técnicas profissionais usadas em estúdios de gravação de alto padrão.</p>"
-  },
-  {
-    id: 2,
-    titulo: "Edição de Vídeo para Iniciantes",
-    slug: "edicao-video-iniciantes",
-    descricao: "Guia completo de edição de vídeos para quem está começando.",
-    thumbnail: "https://images.unsplash.com/photo-1574717024379-61ea99a4d334?q=80&w=2670&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    formHtml: "<h3>Edite como um profissional</h3><p>Este guia completo vai te ensinar todas as técnicas essenciais para edições de nível profissional.</p>"
-  },
-  {
-    id: 3,
-    titulo: "Como Criar Thumbnails Atraentes",
-    slug: "como-criar-thumbnails",
-    descricao: "Aprenda a criar thumbnails que atraem cliques para seus vídeos.",
-    thumbnail: "https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=2671&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    formHtml: "<h3>Multiplique seus cliques</h3><p>Aprenda a criar thumbnails irresistíveis que vão aumentar drasticamente sua taxa de cliques.</p>"
-  },
-];
 
 // Form schema for initial form
 const initialFormSchema = z.object({
@@ -73,12 +42,34 @@ const checkoutFormSchema = z.object({
 const FormPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [content, setContent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { slug } = useParams();
   const navigate = useNavigate();
-  const mp = useMercadoPago('TEST-YOUR-PUBLIC-KEY'); // Substitua pela sua chave pública do Mercado Pago
+  const mp = useMercadoPago('TEST-YOUR-PUBLIC-KEY');
 
-  // Get content based on slug
-  const content = mockContents.find((c) => c.slug === slug);
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/public/contents/${slug}/form`);
+        
+        if (!response.ok) {
+          throw new Error('Conteúdo não encontrado');
+        }
+
+        const data = await response.json();
+        setContent(data);
+      } catch (error) {
+        console.error('Erro ao buscar conteúdo:', error);
+        setContent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, [slug]);
 
   const initialForm = useForm<z.infer<typeof initialFormSchema>>({
     resolver: zodResolver(initialFormSchema),
@@ -178,11 +169,24 @@ const FormPage = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="container max-w-3xl mx-auto py-12 px-4">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-blue"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (!content) {
     return (
       <div className="container max-w-3xl mx-auto py-12 px-4">
         <h1 className="text-2xl font-bold mb-6">Conteúdo não encontrado</h1>
         <p>O conteúdo solicitado não está disponível.</p>
+        <Button onClick={() => navigate("/")} className="mt-4">
+          Voltar para a página inicial
+        </Button>
       </div>
     );
   }
@@ -206,24 +210,28 @@ const FormPage = () => {
             </div>
             
             {/* Video player */}
-            <div className="aspect-video w-full overflow-hidden rounded-lg">
-              <iframe 
-                width="100%" 
-                height="100%" 
-                src={content.videoUrl} 
-                title="Video preview"
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowFullScreen
-                className="w-full h-full"
-              ></iframe>
-            </div>
+            {content.videoUrl && (
+              <div className="aspect-video w-full overflow-hidden rounded-lg">
+                <iframe 
+                  width="100%" 
+                  height="100%" 
+                  src={content.videoUrl} 
+                  title="Video preview"
+                  frameBorder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowFullScreen
+                  className="w-full h-full"
+                ></iframe>
+              </div>
+            )}
             
             {/* Custom HTML content */}
-            <div 
-              className="prose max-w-none mt-6"
-              dangerouslySetInnerHTML={{ __html: content.formHtml }} 
-            />
+            {content.formHtml && (
+              <div 
+                className="prose max-w-none mt-6"
+                dangerouslySetInnerHTML={{ __html: content.formHtml }} 
+              />
+            )}
           </div>
 
           {/* Right column - Form and checkout */}
@@ -253,18 +261,23 @@ const FormPage = () => {
                       name="contribuicao"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contribuição (R$)</FormLabel>
+                          <FormLabel>Contribuição (opcional)</FormLabel>
                           <FormControl>
-                            <Input placeholder="0,00" {...field} />
+                            <Input 
+                              type="text"
+                              placeholder="0,00"
+                              {...field}
+                            />
                           </FormControl>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Você pode contribuir com qualquer valor ou deixar 0 para acesso gratuito.
-                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -279,26 +292,9 @@ const FormPage = () => {
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">Finalizar contribuição</h2>
-                
-                <div className="border rounded-md p-4 mb-6 bg-gray-50">
-                  <div className="flex justify-between mb-2">
-                    <span>Conteúdo:</span>
-                    <span className="font-medium">{content.titulo}</span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span>Email:</span>
-                    <span className="font-medium">{initialForm.getValues("email")}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Contribuição:</span>
-                    <span className="font-medium">
-                      R$ {parseFloat(initialForm.getValues("contribuicao").replace(",", ".")).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Transparent checkout form - Mercado Pago */}
+                <h2 className="text-xl font-semibold mb-4">
+                  Informações de Pagamento
+                </h2>
                 <Form {...checkoutForm}>
                   <form onSubmit={checkoutForm.handleSubmit(onCheckoutSubmit)} className="space-y-4">
                     <FormField
@@ -314,7 +310,6 @@ const FormPage = () => {
                         </FormItem>
                       )}
                     />
-                    
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={checkoutForm.control}
@@ -329,7 +324,6 @@ const FormPage = () => {
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={checkoutForm.control}
                         name="cardCvv"
@@ -344,7 +338,6 @@ const FormPage = () => {
                         )}
                       />
                     </div>
-                    
                     <FormField
                       control={checkoutForm.control}
                       name="cardName"
@@ -358,7 +351,6 @@ const FormPage = () => {
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={checkoutForm.control}
                       name="cpf"
@@ -372,39 +364,31 @@ const FormPage = () => {
                         </FormItem>
                       )}
                     />
-                    
-                    <div className="pt-2">
-                      <Button 
-                        type="submit"
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processando pagamento...
-                          </>
-                        ) : (
-                          "Pagar e Acessar Conteúdo"
-                        )}
-                      </Button>
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        className="w-full mt-2" 
-                        onClick={() => setShowCheckout(false)}
-                        disabled={isSubmitting}
-                      >
-                        Voltar
-                      </Button>
-                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando pagamento...
+                        </>
+                      ) : (
+                        "Finalizar Pagamento"
+                      )}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowCheckout(false)}
+                      disabled={isSubmitting}
+                    >
+                      Voltar
+                    </Button>
                   </form>
                 </Form>
-                
-                <div className="text-center text-xs text-gray-500 mt-4">
-                  <p>Pagamento processado com segurança via Mercado Pago</p>
-                  <p className="mt-1">Seus dados estão protegidos com criptografia de ponta a ponta</p>
-                </div>
               </div>
             )}
           </div>

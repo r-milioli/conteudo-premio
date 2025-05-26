@@ -421,6 +421,74 @@ app.put('/api/contents/:id/status', authenticateToken, async (req: Request, res:
     }
 });
 
+// Buscar conteúdo público por slug
+app.get('/api/public/contents/:slug', async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ 
+            where: { 
+                slug,
+                status: 'published',
+                is_active: true 
+            } 
+        });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        res.json(content);
+    } catch (error) {
+        console.error('Erro ao buscar conteúdo:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
+// Buscar dados do conteúdo para o formulário
+app.get('/api/public/contents/:slug/form', async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+        const contentRepository = AppDataSource.getRepository(Content);
+        const content = await contentRepository.findOne({ 
+            where: { 
+                slug,
+                status: 'published',
+                is_active: true 
+            },
+            select: [
+                'id',
+                'title',
+                'description',
+                'slug',
+                'thumbnail_url',
+                'banner_image_url',
+                'capture_page_title',
+                'capture_page_description',
+                'capture_page_video_url',
+                'capture_page_html'
+            ]
+        });
+        
+        if (!content) {
+            return res.status(404).json({ error: 'Conteúdo não encontrado' });
+        }
+
+        res.json({
+            id: content.id,
+            titulo: content.title,
+            descricao: content.description,
+            slug: content.slug,
+            thumbnail: content.thumbnail_url,
+            videoUrl: content.capture_page_video_url,
+            formHtml: content.capture_page_html
+        });
+    } catch (error) {
+        console.error('Erro ao buscar dados do formulário:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 

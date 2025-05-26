@@ -1,37 +1,8 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
-
-// Dados simulados - seriam obtidos da API/banco de dados
-const contentData = [
-  {
-    id: 1,
-    title: "Como Gravar Vídeos Profissionais",
-    description: "Aprenda técnicas profissionais para gravar vídeos de alta qualidade com equipamentos acessíveis. Este guia contém técnicas avançadas de iluminação, captação de áudio e composição de cena.",
-    slug: "como-gravar-videos-profissionais",
-    image: "https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=2670&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
-  },
-  {
-    id: 2,
-    title: "Edição de Vídeo para Iniciantes",
-    description: "Domine as técnicas fundamentais de edição de vídeo e crie conteúdo cativante para suas redes. Aprenda sobre cortes, transições, correção de cor e muito mais.",
-    slug: "edicao-video-iniciantes",
-    image: "https://images.unsplash.com/photo-1574717024379-61ea99a4d334?q=80&w=2670&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
-  },
-  {
-    id: 3,
-    title: "Como Criar Thumbnails Atraentes",
-    description: "Aumente seus cliques com thumbnails que realmente convertem. Templates e técnicas exclusivas para criar thumbnails profissionais que aumentam sua taxa de cliques.",
-    slug: "como-criar-thumbnails",
-    image: "https://images.unsplash.com/photo-1626785774573-4b799315345d?q=80&w=2671&auto=format&fit=crop",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ"
-  }
-];
 
 const ContentPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -40,17 +11,29 @@ const ContentPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulando uma chamada API para buscar dados do conteúdo
-    setLoading(true);
-    setTimeout(() => {
-      const foundContent = contentData.find(item => item.slug === slug);
-      setContent(foundContent);
-      setLoading(false);
-    }, 500);
+    const fetchContent = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/public/contents/${slug}`);
+        
+        if (!response.ok) {
+          throw new Error('Conteúdo não encontrado');
+        }
+
+        const data = await response.json();
+        setContent(data);
+      } catch (error) {
+        console.error('Erro ao buscar conteúdo:', error);
+        setContent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
   }, [slug]);
 
   const handleAccessContent = () => {
-    // Fixed navigation - now correctly using the current content slug
     navigate(`/form/${slug}`);
   };
 
@@ -86,7 +69,7 @@ const ContentPage = () => {
         <div className="max-w-4xl mx-auto">
           <div className="aspect-video w-full overflow-hidden rounded-lg mb-8">
             <img 
-              src={content.image} 
+              src={content.banner_image_url || content.thumbnail_url} 
               alt={content.title} 
               className="w-full h-full object-cover"
             />
