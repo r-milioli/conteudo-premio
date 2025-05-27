@@ -128,24 +128,33 @@ const FormPage = () => {
     const contribuicao = parseFloat(values.contribuicao.replace(/[^\d,]/g, '').replace(',', '.'));
     
     try {
-      // Registra o acesso
-      const response = await fetch(`/api/public/contents/${slug}/access`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-          contribution_amount: contribuicao,
-          card_number: values.cardNumber ? values.cardNumber.replace(/\D/g, '') : null
-        }),
-      });
+      // Se for acesso gratuito, registra imediatamente
+      if (contribuicao === 0) {
+        // Registra o acesso
+        const response = await fetch(`/api/public/contents/${slug}/access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: values.email,
+            contribution_amount: 0,
+            payment_status: 'gratuito'
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error('Erro ao registrar acesso');
-      }
+        if (!response.ok) {
+          throw new Error('Erro ao registrar acesso');
+        }
 
-      if (contribuicao > 0) {
+        navigate(`/entrega/${slug}`, { 
+          state: { 
+            email: values.email,
+            contribuicao: 0,
+            status: "gratuito"
+          } 
+        });
+      } else {
         setIsSubmitting(true);
         // Processar pagamento com todos os dados do cartão
         try {
@@ -174,6 +183,24 @@ const FormPage = () => {
           const response = await mp.createPayment(paymentData);
           
           if (response.status === "approved") {
+            // Registra o acesso somente após a aprovação do pagamento
+            const accessResponse = await fetch(`/api/public/contents/${slug}/access`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: values.email,
+                contribution_amount: contribuicao,
+                payment_id: response.id,
+                payment_status: response.status
+              }),
+            });
+
+            if (!accessResponse.ok) {
+              throw new Error('Erro ao registrar acesso após pagamento');
+            }
+
             navigate(`/entrega/${slug}`, { 
               state: { 
                 email: values.email,
@@ -193,20 +220,12 @@ const FormPage = () => {
           });
         }
         setIsSubmitting(false);
-      } else {
-        navigate(`/entrega/${slug}`, { 
-          state: { 
-            email: values.email,
-            contribuicao: 0,
-            status: "gratuito"
-          } 
-        });
       }
     } catch (error) {
-      console.error('Erro ao registrar acesso:', error);
+      console.error('Erro ao processar operação:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível registrar seu acesso. Tente novamente.",
+        description: "Não foi possível completar a operação. Tente novamente.",
         variant: "destructive",
       });
     }
