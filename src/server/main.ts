@@ -955,9 +955,16 @@ app.get('/health', (_req: Request, res: Response) => {
 // Endpoint para configuração do Mercado Pago
 app.get('/api/config/mercadopago', (_req: Request, res: Response) => {
     try {
+        console.log('Variáveis de ambiente do Mercado Pago:');
+        console.log('PUBLIC_KEY:', process.env.MERCADO_PAGO_PUBLIC_KEY);
+        console.log('ACCESS_TOKEN:', process.env.MERCADO_PAGO_ACCESS_TOKEN ? '**presente**' : '**ausente**');
+        console.log('CLIENT_ID:', process.env.MERCADO_PAGO_CLIENT_ID ? '**presente**' : '**ausente**');
+        console.log('CLIENT_SECRET:', process.env.MERCADO_PAGO_CLIENT_SECRET ? '**presente**' : '**ausente**');
+        
         const publicKey = process.env.MERCADO_PAGO_PUBLIC_KEY;
         
         if (!publicKey) {
+            console.error('Chave pública do Mercado Pago não encontrada nas variáveis de ambiente');
             return res.status(500).json({ 
                 error: 'Chave pública do Mercado Pago não configurada' 
             });
@@ -968,6 +975,83 @@ app.get('/api/config/mercadopago', (_req: Request, res: Response) => {
         console.error('Erro ao buscar configuração do Mercado Pago:', error);
         res.status(500).json({ 
             error: 'Erro ao buscar configuração do Mercado Pago' 
+        });
+    }
+});
+
+// Endpoint para processar pagamentos
+app.post('/api/payments/process', async (req: Request, res: Response) => {
+    try {
+        const {
+            token,
+            transaction_amount,
+            description,
+            installments,
+            payment_method_id,
+            issuer_id,
+            payer,
+            binary_mode
+        } = req.body;
+
+        // Validar dados obrigatórios
+        if (!token || !transaction_amount || !payment_method_id || !payer.email) {
+            return res.status(400).json({
+                error: 'Dados de pagamento incompletos',
+                details: 'Todos os campos são obrigatórios'
+            });
+        }
+
+        // Gerar uma chave de idempotência única
+        const idempotencyKey = `${Date.now()}-${token}-${Math.random().toString(36).substring(2, 15)}`;
+
+        // Log dos dados que serão enviados
+        console.log('Dados do pagamento a serem enviados:', {
+            transaction_amount,
+            token,
+            description,
+            installments,
+            payment_method_id,
+            issuer_id,
+            payer,
+            binary_mode
+        });
+
+        // Criar pagamento no Mercado Pago
+        const response = await fetch('https://api.mercadopago.com/v1/payments', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+                'Content-Type': 'application/json',
+                'X-Idempotency-Key': idempotencyKey
+            },
+            body: JSON.stringify({
+                transaction_amount: Number(transaction_amount),
+                token,
+                description,
+                installments: Number(installments),
+                payment_method_id,
+                issuer_id,
+                payer,
+                binary_mode: true
+            })
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            console.error('Erro do Mercado Pago:', responseData);
+            return res.status(response.status).json(responseData);
+        }
+
+        // Log do resultado do pagamento
+        console.log('Resultado do pagamento:', JSON.stringify(responseData, null, 2));
+
+        res.json(responseData);
+    } catch (error) {
+        console.error('Erro ao processar pagamento:', error);
+        res.status(500).json({
+            error: 'Erro ao processar pagamento',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
         });
     }
 });
