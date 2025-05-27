@@ -23,11 +23,16 @@ const initialFormSchema = z.object({
     message: "Por favor, insira um email válido",
   }),
   contribuicao: z.string().refine((val) => {
-    const num = parseFloat(val.replace(",", "."));
+    const num = parseFloat(val.replace(/[^\d,]/g, '').replace(',', '.'));
     return !isNaN(num) && num >= 0;
   }, {
     message: "Por favor, insira um valor válido (igual ou maior que zero)",
   }),
+  cardNumber: z.string().optional(),
+  cardExpiry: z.string().optional(),
+  cardCvv: z.string().optional(),
+  cardName: z.string().optional(),
+  cpf: z.string().optional(),
 });
 
 // Form schema for checkout
@@ -41,12 +46,12 @@ const checkoutFormSchema = z.object({
 
 const FormPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [showCardFields, setShowCardFields] = useState(false);
   const [content, setContent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { slug } = useParams();
   const navigate = useNavigate();
-  const mp = useMercadoPago('TEST-YOUR-PUBLIC-KEY');
+  const mp = useMercadoPago();
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -75,7 +80,12 @@ const FormPage = () => {
     resolver: zodResolver(initialFormSchema),
     defaultValues: {
       email: "",
-      contribuicao: "0",
+      contribuicao: "",
+      cardNumber: "",
+      cardExpiry: "",
+      cardCvv: "",
+      cardName: "",
+      cpf: "",
     },
   });
 
@@ -90,8 +100,32 @@ const FormPage = () => {
     },
   });
 
+  useEffect(() => {
+    // Reseta o formulário de checkout quando showCheckout muda para true
+    if (showCardFields) {
+      checkoutForm.reset({
+        cardNumber: "",
+        cardExpiry: "",
+        cardCvv: "",
+        cardName: "",
+        cpf: "",
+      });
+    }
+  }, [showCardFields]);
+
+  // Monitora mudanças no valor da contribuição
+  useEffect(() => {
+    const subscription = initialForm.watch((value, { name }) => {
+      if (name === 'contribuicao') {
+        const contribuicao = parseFloat(value.contribuicao?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
+        setShowCardFields(contribuicao > 0);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [initialForm.watch]);
+
   const onInitialSubmit = async (values: z.infer<typeof initialFormSchema>) => {
-    const contribuicao = parseFloat(values.contribuicao.replace(",", "."));
+    const contribuicao = parseFloat(values.contribuicao.replace(/[^\d,]/g, '').replace(',', '.'));
     
     try {
       // Registra o acesso
@@ -102,7 +136,8 @@ const FormPage = () => {
         },
         body: JSON.stringify({
           email: values.email,
-          contribution_amount: contribuicao
+          contribution_amount: contribuicao,
+          card_number: values.cardNumber ? values.cardNumber.replace(/\D/g, '') : null
         }),
       });
 
@@ -111,20 +146,61 @@ const FormPage = () => {
       }
 
       if (contribuicao > 0) {
-        setShowCheckout(true);
-      } else {
         setIsSubmitting(true);
-        
-        setTimeout(() => {
-          setIsSubmitting(false);
-          navigate(`/entrega/${slug}`, { 
-            state: { 
+        // Processar pagamento com todos os dados do cartão
+        try {
+          const paymentData = {
+            transaction_amount: contribuicao,
+            description: `Contribuição para ${content?.titulo}`,
+            payment_method_id: 'credit_card',
+            payer: {
               email: values.email,
-              contribuicao: 0,
-              status: "gratuito"
-            } 
+            },
+            card: {
+              number: values.cardNumber?.replace(/\D/g, '') || '',
+              expiration_month: values.cardExpiry?.split('/')[0] || '',
+              expiration_year: '20' + (values.cardExpiry?.split('/')[1] || ''),
+              security_code: values.cardCvv,
+              cardholder: {
+                name: values.cardName,
+                identification: {
+                  type: 'CPF',
+                  number: values.cpf?.replace(/\D/g, '') || ''
+                }
+              }
+            }
+          };
+
+          const response = await mp.createPayment(paymentData);
+          
+          if (response.status === "approved") {
+            navigate(`/entrega/${slug}`, { 
+              state: { 
+                email: values.email,
+                contribuicao: contribuicao,
+                status: "aprovado",
+                payment_id: response.id
+              } 
+            });
+          } else {
+            throw new Error('Pagamento não aprovado');
+          }
+        } catch (error) {
+          toast({
+            title: "Erro no pagamento",
+            description: "Houve um erro ao processar seu pagamento. Tente novamente.",
+            variant: "destructive"
           });
-        }, 1500);
+        }
+        setIsSubmitting(false);
+      } else {
+        navigate(`/entrega/${slug}`, { 
+          state: { 
+            email: values.email,
+            contribuicao: 0,
+            status: "gratuito"
+          } 
+        });
       }
     } catch (error) {
       console.error('Erro ao registrar acesso:', error);
@@ -273,163 +349,227 @@ const FormPage = () => {
             )}
           </div>
 
-          {/* Right column - Form and checkout */}
+          {/* Right column - Form */}
           <div>
-            {!showCheckout ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">
-                  Complete para acessar o conteúdo
-                </h2>
-                <Form {...initialForm}>
-                  <form onSubmit={initialForm.handleSubmit(onInitialSubmit)} className="space-y-4">
-                    <FormField
-                      control={initialForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="seu@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={initialForm.control}
-                      name="contribuicao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Contribuição (opcional)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="text"
-                              placeholder="0,00"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="submit" 
-                      className="w-full"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processando...
-                        </>
-                      ) : (
-                        "Continuar"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4">
-                  Informações de Pagamento
-                </h2>
-                <Form {...checkoutForm}>
-                  <form onSubmit={checkoutForm.handleSubmit(onCheckoutSubmit)} className="space-y-4">
-                    <FormField
-                      control={checkoutForm.control}
-                      name="cardNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Número do Cartão</FormLabel>
-                          <FormControl>
-                            <Input placeholder="1234 5678 9012 3456" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">
+                {showCardFields ? "Informações de Pagamento" : "Complete para acessar o conteúdo"}
+              </h2>
+              <Form {...initialForm}>
+                <form onSubmit={initialForm.handleSubmit(onInitialSubmit)} className="space-y-4">
+                  <FormField
+                    control={initialForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="seu@email.com" 
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              // Quando o email é preenchido, atualiza o estado
+                              if (showCardFields) {
+                                initialForm.setValue('email', e.target.value);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={initialForm.control}
+                    name="contribuicao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contribuição (opcional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="text"
+                            placeholder="R$ 0,00"
+                            {...field}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              value = value.replace(/[^\d,]/g, '');
+                              if (!value.startsWith('R$ ')) {
+                                value = 'R$ ' + value;
+                              }
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {showCardFields && (
+                    <>
                       <FormField
-                        control={checkoutForm.control}
-                        name="cardExpiry"
+                        control={initialForm.control}
+                        name="cardNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Validade</FormLabel>
+                            <FormLabel>Número do Cartão</FormLabel>
                             <FormControl>
-                              <Input placeholder="MM/AA" {...field} />
+                              <Input 
+                                type="text" 
+                                placeholder="1234 5678 9012 3456" 
+                                {...field}
+                                onChange={(e) => {
+                                  // Permite apenas números e espaços
+                                  const value = e.target.value.replace(/[^\d\s]/g, '');
+                                  // Limita a 19 caracteres (16 números + 3 espaços)
+                                  if (value.length <= 19) {
+                                    field.onChange(value);
+                                  }
+                                }}
+                                value={field.value || ''}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={initialForm.control}
+                          name="cardExpiry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Validade</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="MM/AA" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    let value = e.target.value.replace(/\D/g, '');
+                                    if (value.length >= 2) {
+                                      value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                    }
+                                    if (value.length <= 5) {
+                                      field.onChange(value);
+                                    }
+                                  }}
+                                  value={field.value || ''}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={initialForm.control}
+                          name="cardCvv"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CVV</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="123" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 4) {
+                                      field.onChange(value);
+                                    }
+                                  }}
+                                  value={field.value || ''}
+                                  maxLength={4}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={initialForm.control}
+                        name="cardName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome no Cartão</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="NOME COMPLETO" 
+                                {...field}
+                                onChange={(e) => {
+                                  const value = e.target.value.toUpperCase();
+                                  field.onChange(value);
+                                }}
+                                value={field.value || ''}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       <FormField
-                        control={checkoutForm.control}
-                        name="cardCvv"
+                        control={initialForm.control}
+                        name="cpf"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>CVV</FormLabel>
+                            <FormLabel>CPF</FormLabel>
                             <FormControl>
-                              <Input placeholder="123" {...field} />
+                              <Input 
+                                placeholder="123.456.789-00" 
+                                {...field}
+                                onChange={(e) => {
+                                  let value = e.target.value.replace(/\D/g, '');
+                                  if (value.length > 0) {
+                                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                                  }
+                                  if (value.length <= 14) {
+                                    field.onChange(value);
+                                  }
+                                }}
+                                value={field.value || ''}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                    <FormField
-                      control={checkoutForm.control}
-                      name="cardName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome no Cartão</FormLabel>
-                          <FormControl>
-                            <Input placeholder="NOME COMPLETO" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={checkoutForm.control}
-                      name="cpf"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPF</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123.456.789-00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button 
-                      type="submit" 
-                      className="w-full"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processando pagamento...
-                        </>
-                      ) : (
-                        "Finalizar Pagamento"
-                      )}
-                    </Button>
+                    </>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {showCardFields ? "Processando pagamento..." : "Processando..."}
+                      </>
+                    ) : (
+                      showCardFields ? "Finalizar Pagamento" : "Continuar"
+                    )}
+                  </Button>
+
+                  {showCardFields && (
                     <Button 
                       type="button" 
                       variant="outline"
                       className="w-full"
-                      onClick={() => setShowCheckout(false)}
+                      onClick={() => {
+                        setShowCardFields(false);
+                        initialForm.reset();
+                      }}
                       disabled={isSubmitting}
                     >
                       Voltar
                     </Button>
-                  </form>
-                </Form>
-              </div>
-            )}
+                  )}
+                </form>
+              </Form>
+            </div>
           </div>
         </div>
       </div>

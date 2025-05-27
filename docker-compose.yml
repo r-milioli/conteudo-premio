@@ -13,6 +13,11 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=content_premium
       - JWT_SECRET=your-secret-key-change-in-production
+      # Variáveis do Mercado Pago
+      - MERCADO_PAGO_PUBLIC_KEY=${MERCADO_PAGO_PUBLIC_KEY}
+      - MERCADO_PAGO_ACCESS_TOKEN=${MERCADO_PAGO_ACCESS_TOKEN}
+      - MERCADO_PAGO_CLIENT_ID=${MERCADO_PAGO_CLIENT_ID}
+      - MERCADO_PAGO_CLIENT_SECRET=${MERCADO_PAGO_CLIENT_SECRET}
     depends_on:
       - postgres
     networks:

@@ -15,7 +15,7 @@ const DeliveryPage = () => {
   // Get user data from location state
   const userData = location.state || {};
 
-  const mp = useMercadoPago('YOUR_PUBLIC_KEY');
+  const mp = useMercadoPago();
 
   useEffect(() => {
     const fetchContent = async () => {

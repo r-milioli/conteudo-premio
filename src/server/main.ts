@@ -9,6 +9,9 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Content } from '../database/entities/Content.js';
 import { ContentAccess } from '../database/entities/ContentAccess.js';
+import fetch from 'node-fetch';
+import { WebhookProcessor } from '../jobs/WebhookProcessor.js';
+import { WebhookService } from '../services/WebhookService.js';
 
 // Load environment variables
 config();
@@ -340,6 +343,14 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
 
         await contentRepository.save(content);
         
+        // Corrigindo o nome do evento de content.created para content_created
+        await WebhookService.createEvent('content_created', {
+            content_id: content.id,
+            title: content.title,
+            slug: content.slug,
+            status: content.status,
+        });
+        
         res.status(201).json(content);
     } catch (error) {
         console.error('Erro ao criar conteúdo:', error);
@@ -394,6 +405,14 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
         };
 
         await contentRepository.save(updatedContent);
+        
+        // Corrigindo o nome do evento de content.updated para content_updated
+        await WebhookService.createEvent('content_updated', {
+            content_id: content.id,
+            title: content.title,
+            slug: content.slug,
+            status: content.status,
+        });
         
         res.json(updatedContent);
     } catch (error) {
@@ -611,6 +630,16 @@ app.post('/api/public/contents/:slug/access', async (req: Request, res: Response
         // Incrementa o contador de acessos do conteúdo
         await contentRepository.increment({ id: content.id }, 'access_count', 1);
         
+        // Adiciona evento de webhook para novo acesso
+        await WebhookService.createEvent('content.access.created', {
+            content_id: content.id,
+            user_email: email,
+            access_type: access.access_type,
+            contribution_amount: access.contribution_amount,
+            payment_id: access.payment_id,
+            payment_status: access.payment_status,
+        });
+        
         res.status(201).json({ 
             message: 'Acesso registrado com sucesso',
             content_id: content.id 
@@ -751,12 +780,174 @@ app.get('/api/public/contents', async (req: Request, res: Response) => {
     }
 });
 
+// Sistema de Webhooks Genérico
+app.post('/api/webhooks/:event', async (req: Request, res: Response) => {
+    try {
+        const { event } = req.params;
+        console.log(`Webhook recebido para evento ${event}:`, JSON.stringify(req.body, null, 2));
+
+        // Busca as configurações de webhook
+        const settingsRepository = AppDataSource.getRepository(SiteSettings);
+        const settings = await settingsRepository.findOne({ where: { id: 1 } });
+
+        if (!settings) {
+            console.error('Configurações não encontradas');
+            return res.status(500).json({ 
+                error: 'Configurações não encontradas',
+                details: 'Verifique se as configurações do site foram inicializadas'
+            });
+        }
+
+        // Verifica se o evento está habilitado
+        const enabledEvents = JSON.parse(settings.enabledEvents || '[]');
+        if (!enabledEvents.includes(event)) {
+            console.warn(`Evento ${event} não está habilitado`);
+            return res.status(400).json({
+                error: 'Evento não habilitado',
+                details: `O evento ${event} não está configurado para receber webhooks`
+            });
+        }
+
+        // Processa diferentes tipos de eventos
+        switch (event) {
+            case 'content.accessed':
+                // Lógica para quando um conteúdo é acessado
+                const { contentId, userEmail } = req.body;
+                console.log(`Conteúdo ${contentId} acessado por ${userEmail}`);
+                break;
+
+            case 'payment.received':
+                // Lógica para quando um pagamento é recebido
+                const { paymentId, amount, status } = req.body;
+                console.log(`Pagamento ${paymentId} recebido: ${amount} (${status})`);
+                break;
+
+            case 'user.registered':
+                // Lógica para quando um usuário se registra
+                const { email, timestamp } = req.body;
+                console.log(`Novo usuário registrado: ${email} em ${timestamp}`);
+                break;
+
+            default:
+                // Para eventos personalizados
+                console.log(`Evento personalizado ${event} recebido`);
+        }
+
+        // Envia o webhook para a URL configurada
+        if (settings.webhookUrl) {
+            try {
+                const webhookResponse = await fetch(settings.webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Webhook-Event': event,
+                        'X-Webhook-Signature': settings.secretKey || ''
+                    },
+                    body: JSON.stringify({
+                        event,
+                        data: req.body,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (!webhookResponse.ok) {
+                    console.error(`Erro ao enviar webhook para ${settings.webhookUrl}:`, await webhookResponse.text());
+                }
+            } catch (error: any) {
+                console.error('Erro ao enviar webhook:', error.message);
+            }
+        }
+
+        return res.json({ 
+            message: 'Webhook processado com sucesso',
+            event,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error: any) {
+        console.error('Erro ao processar webhook:', error);
+        return res.status(500).json({
+            error: 'Erro interno do servidor',
+            details: error.message || 'Erro desconhecido'
+        });
+    }
+});
+
+// Webhook do Mercado Pago
+app.post('/api/webhooks/mercadopago', async (req: Request, res: Response) => {
+    try {
+        const { action, data } = req.body;
+
+        if (action === "payment.created" || action === "payment.updated") {
+            const paymentId = data.id;
+            
+            // Busca o pagamento no Mercado Pago
+            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao buscar pagamento no Mercado Pago');
+            }
+
+            const payment = await response.json();
+
+            // Dispara eventos com base no status do pagamento
+            if (payment.status === 'approved') {
+                await WebhookService.createEvent('payment_success', {
+                    payment_id: payment.id,
+                    amount: payment.transaction_amount,
+                    payer_email: payment.payer.email,
+                    status: payment.status,
+                    payment_method: payment.payment_method_id,
+                    timestamp: new Date().toISOString()
+                });
+            } else if (['rejected', 'cancelled'].includes(payment.status)) {
+                await WebhookService.createEvent('payment_failure', {
+                    payment_id: payment.id,
+                    amount: payment.transaction_amount,
+                    payer_email: payment.payer.email,
+                    status: payment.status,
+                    payment_method: payment.payment_method_id,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+
+        res.status(200).json({ message: 'Webhook processado com sucesso' });
+    } catch (error) {
+        console.error('Erro ao processar webhook do Mercado Pago:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
 // API Routes
 app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok' });
+});
+
+// Endpoint para configuração do Mercado Pago
+app.get('/api/config/mercadopago', (_req: Request, res: Response) => {
+    try {
+        const publicKey = process.env.MERCADO_PAGO_PUBLIC_KEY;
+        
+        if (!publicKey) {
+            return res.status(500).json({ 
+                error: 'Chave pública do Mercado Pago não configurada' 
+            });
+        }
+
+        res.json({ publicKey });
+    } catch (error) {
+        console.error('Erro ao buscar configuração do Mercado Pago:', error);
+        res.status(500).json({ 
+            error: 'Erro ao buscar configuração do Mercado Pago' 
+        });
+    }
 });
 
 // Handle React routing, return all requests to React app
@@ -767,4 +958,7 @@ app.get('*', (_req: Request, res: Response) => {
 // Start server
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-}); 
+});
+
+// Inicializa o processador de webhooks
+WebhookProcessor.start(); 

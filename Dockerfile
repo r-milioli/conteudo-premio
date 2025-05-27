@@ -50,7 +50,12 @@ USER nodejs
 # Define variáveis de ambiente padrão
 ENV PORT=8080 \
     NODE_ENV=production \
-    NODE_OPTIONS="--loader ts-node/esm --experimental-specifier-resolution=node"
+    NODE_OPTIONS="--loader ts-node/esm --experimental-specifier-resolution=node" \
+    # Variáveis do Mercado Pago (valores serão sobrescritos em runtime)
+    MERCADO_PAGO_PUBLIC_KEY="" \
+    MERCADO_PAGO_ACCESS_TOKEN="" \
+    MERCADO_PAGO_CLIENT_ID="" \
+    MERCADO_PAGO_CLIENT_SECRET=""
 
 # Expõe a porta da aplicação
 EXPOSE 8080
