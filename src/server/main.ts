@@ -748,6 +748,78 @@ app.get('/api/admin/reports', async (req: Request, res: Response) => {
   }
 });
 
+// Webhook do Mercado Pago (DEVE VIR ANTES DO WEBHOOK GENÉRICO)
+app.post('/api/webhooks/mercadopago', async (req: Request, res: Response) => {
+    try {
+        const { action, data, live_mode } = req.body;
+        console.log('Webhook do Mercado Pago recebido:', JSON.stringify(req.body, null, 2));
+
+        if (!action || !data || !data.id) {
+            return res.status(400).json({ 
+                error: 'Payload inválido',
+                details: 'Os campos action e data.id são obrigatórios'
+            });
+        }
+
+        // Se não for modo live (teste), retorna sucesso sem processar
+        if (live_mode === false) {
+            console.log('Evento de teste do Mercado Pago recebido e validado com sucesso');
+            return res.status(200).json({ 
+                message: 'Evento de teste processado com sucesso',
+                details: 'Webhooks de teste são validados mas não processados'
+            });
+        }
+
+        if (action === "payment.created" || action === "payment.updated") {
+            const paymentId = data.id;
+            
+            // Busca o pagamento no Mercado Pago
+            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                headers: {
+                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Erro ao buscar pagamento:', await response.text());
+                throw new Error('Erro ao buscar pagamento no Mercado Pago');
+            }
+
+            const payment = await response.json();
+            console.log('Dados do pagamento:', JSON.stringify(payment, null, 2));
+
+            // Dispara eventos com base no status do pagamento
+            if (payment.status === 'approved') {
+                await WebhookService.createEvent('payment_success', {
+                    payment_id: payment.id,
+                    amount: payment.transaction_amount,
+                    payer_email: payment.payer.email,
+                    status: payment.status,
+                    payment_method: payment.payment_method_id,
+                    timestamp: new Date().toISOString()
+                });
+            } else if (['rejected', 'cancelled'].includes(payment.status)) {
+                await WebhookService.createEvent('payment_failure', {
+                    payment_id: payment.id,
+                    amount: payment.transaction_amount,
+                    payer_email: payment.payer.email,
+                    status: payment.status,
+                    payment_method: payment.payment_method_id,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+
+        res.status(200).json({ message: 'Webhook do Mercado Pago processado com sucesso' });
+    } catch (error) {
+        console.error('Erro ao processar webhook do Mercado Pago:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
+    }
+});
+
 // Listar conteúdos públicos
 app.get('/api/public/contents', async (req: Request, res: Response) => {
     try {
@@ -869,56 +941,6 @@ app.post('/api/webhooks/:event', async (req: Request, res: Response) => {
             error: 'Erro interno do servidor',
             details: error.message || 'Erro desconhecido'
         });
-    }
-});
-
-// Webhook do Mercado Pago
-app.post('/api/webhooks/mercadopago', async (req: Request, res: Response) => {
-    try {
-        const { action, data } = req.body;
-
-        if (action === "payment.created" || action === "payment.updated") {
-            const paymentId = data.id;
-            
-            // Busca o pagamento no Mercado Pago
-            const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-                headers: {
-                    'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Erro ao buscar pagamento no Mercado Pago');
-            }
-
-            const payment = await response.json();
-
-            // Dispara eventos com base no status do pagamento
-            if (payment.status === 'approved') {
-                await WebhookService.createEvent('payment_success', {
-                    payment_id: payment.id,
-                    amount: payment.transaction_amount,
-                    payer_email: payment.payer.email,
-                    status: payment.status,
-                    payment_method: payment.payment_method_id,
-                    timestamp: new Date().toISOString()
-                });
-            } else if (['rejected', 'cancelled'].includes(payment.status)) {
-                await WebhookService.createEvent('payment_failure', {
-                    payment_id: payment.id,
-                    amount: payment.transaction_amount,
-                    payer_email: payment.payer.email,
-                    status: payment.status,
-                    payment_method: payment.payment_method_id,
-                    timestamp: new Date().toISOString()
-                });
-            }
-        }
-
-        res.status(200).json({ message: 'Webhook processado com sucesso' });
-    } catch (error) {
-        console.error('Erro ao processar webhook do Mercado Pago:', error);
-        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 

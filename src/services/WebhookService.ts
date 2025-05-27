@@ -41,8 +41,11 @@ export class WebhookService {
             return;
         }
 
+        // Bypass enabledEvents check for Mercado Pago events
+        const isMercadoPagoEvent = eventType === 'payment_success' || eventType === 'payment_failure';
         const enabledEvents = JSON.parse(settings.enabledEvents || "[]");
-        if (!enabledEvents.includes(eventType)) {
+        
+        if (!isMercadoPagoEvent && !enabledEvents.includes(eventType)) {
             console.log(`Evento ${eventType} não está habilitado`);
             return;
         }
