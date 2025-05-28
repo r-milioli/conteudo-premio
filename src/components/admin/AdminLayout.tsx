@@ -1,14 +1,18 @@
-
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { LayoutDashboard, FileText, BarChart, Menu, LogOut, FileEdit, Settings } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import DynamicHead from "@/components/DynamicHead";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
+  const siteName = settings?.siteName || 'Conteúdo Premium';
 
   useEffect(() => {
     // Verificar se o usuário está autenticado
@@ -40,11 +44,16 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
+      <DynamicHead />
       {/* Desktop Sidebar */}
       <aside className="w-64 bg-white border-r hidden md:block">
         <div className="p-4 border-b">
-          <Link to="/admin/dashboard" className="font-display font-semibold text-lg text-brand-blue">
-            Conteúdo Premium
+          <Link 
+            to="/admin/dashboard" 
+            className="font-display font-semibold text-lg block"
+            style={{ color: primaryColor }}
+          >
+            {siteName}
           </Link>
           <p className="text-xs text-gray-500">Painel Administrativo</p>
         </div>
@@ -55,7 +64,10 @@ const AdminLayout = () => {
               <li key={item.path}>
                 <Link 
                   to={item.path} 
-                  className="flex items-center p-2 rounded-md hover:bg-gray-100 text-gray-700 hover:text-brand-blue"
+                  className="flex items-center p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200"
+                  style={{ color: 'inherit' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
                 >
                   <item.icon className="h-5 w-5 mr-3" />
                   <span>{item.title}</span>
@@ -79,8 +91,11 @@ const AdminLayout = () => {
               <SheetContent side="left" className="w-[240px] sm:w-[300px]">
                 <div className="py-4">
                   <div className="mb-4 px-2">
-                    <h2 className="font-display font-semibold text-lg text-brand-blue">
-                      Conteúdo Premium
+                    <h2 
+                      className="font-display font-semibold text-lg"
+                      style={{ color: primaryColor }}
+                    >
+                      {siteName}
                     </h2>
                     <p className="text-xs text-gray-500">Painel Administrativo</p>
                   </div>
@@ -90,7 +105,10 @@ const AdminLayout = () => {
                         <li key={item.path}>
                           <Link 
                             to={item.path} 
-                            className="flex items-center p-2 rounded-md hover:bg-gray-100 text-gray-700 hover:text-brand-blue"
+                            className="flex items-center p-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors duration-200"
+                            style={{ color: 'inherit' }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+                            onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
                             onClick={() => setIsMobileMenuOpen(false)}
                           >
                             <item.icon className="h-5 w-5 mr-3" />
@@ -106,11 +124,24 @@ const AdminLayout = () => {
           </div>
 
           <div className="flex-1 md:hidden px-4">
-            <h1 className="text-base sm:text-lg font-medium truncate">Painel Admin</h1>
+            <h1 
+              className="text-base sm:text-lg font-medium truncate"
+              style={{ color: primaryColor }}
+            >
+              {siteName}
+            </h1>
           </div>
 
           <div className="flex items-center">
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-xs sm:text-sm">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout} 
+              className="text-xs sm:text-sm transition-colors duration-200"
+              style={{ color: 'inherit' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'inherit'}
+            >
               <LogOut className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Sair</span>
             </Button>
