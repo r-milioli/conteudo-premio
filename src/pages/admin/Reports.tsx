@@ -9,7 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, FileDown } from "lucide-react";
+import { Calendar as CalendarIcon, FileDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -41,6 +41,14 @@ const Reports = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(downloads.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = downloads.slice(startIndex, endIndex);
 
   const fetchReportData = async () => {
     try {
@@ -125,6 +133,46 @@ const Reports = () => {
     setSearchTerm("");
     setDateFilter(undefined);
   };
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
+  // Add pagination controls component
+  const PaginationControls = () => (
+    <div className="flex items-center justify-between py-4">
+      <div className="text-sm text-gray-600">
+        Mostrando {startIndex + 1}-{Math.min(endIndex, downloads.length)} de {downloads.length} registros
+      </div>
+      <div className="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePreviousPage}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Anterior
+        </Button>
+        <div className="text-sm font-medium">
+          Página {currentPage} de {totalPages}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages}
+        >
+          Próxima
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 
   // Renderização do componente
   return (
@@ -212,50 +260,53 @@ const Reports = () => {
               Nenhum download encontrado
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Conteúdo</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {downloads.map((download) => (
-                    <TableRow key={download.id}>
-                      <TableCell>{download.id}</TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
-                        {download.conteudo_titulo}
-                      </TableCell>
-                      <TableCell>{download.email}</TableCell>
-                      <TableCell>
-                        {download.valor_contribuido > 0
-                          ? `R$ ${download.valor_contribuido.toFixed(2)}`
-                          : "Gratuito"}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs ${
-                            download.status_pagamento === "aprovado"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
-                      </TableCell>
+            <>
+              <div className="mt-6 overflow-hidden border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Conteúdo</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {currentItems.map((download) => (
+                      <TableRow key={download.id}>
+                        <TableCell>{download.id}</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
+                          {download.conteudo_titulo}
+                        </TableCell>
+                        <TableCell>{download.email}</TableCell>
+                        <TableCell>
+                          {download.valor_contribuido > 0
+                            ? `R$ ${download.valor_contribuido.toFixed(2)}`
+                            : "Gratuito"}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs ${
+                              download.status_pagamento === "aprovado"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls />
+            </>
           )}
         </TabsContent>
 
@@ -270,42 +321,45 @@ const Reports = () => {
               Nenhum contato encontrado
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Conteúdo</TableHead>
-                    <TableHead>Tipo de Acesso</TableHead>
-                    <TableHead>Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {downloads.map((download) => (
-                    <TableRow key={download.id}>
-                      <TableCell>{download.email}</TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
-                        {download.conteudo_titulo}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-block px-2 py-1 rounded-full text-xs ${
-                            download.status_pagamento === "aprovado"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
-                      </TableCell>
+            <>
+              <div className="mt-6 overflow-hidden border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Conteúdo</TableHead>
+                      <TableHead>Tipo de Acesso</TableHead>
+                      <TableHead>Data</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {currentItems.map((download) => (
+                      <TableRow key={download.id}>
+                        <TableCell>{download.email}</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={download.conteudo_titulo}>
+                          {download.conteudo_titulo}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs ${
+                              download.status_pagamento === "aprovado"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {download.status_pagamento === "aprovado" ? "Pago" : "Gratuito"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(download.data_acesso), "dd/MM/yyyy HH:mm")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls />
+            </>
           )}
         </TabsContent>
       </Tabs>
