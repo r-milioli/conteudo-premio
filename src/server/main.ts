@@ -1056,6 +1056,45 @@ app.post('/api/payments/process', async (req: Request, res: Response) => {
     }
 });
 
+// Endpoint para configurações públicas do site
+app.get('/api/public/site-settings', async (_req: Request, res: Response) => {
+  try {
+    const settingsRepository = AppDataSource.getRepository(SiteSettings);
+    const settings = await settingsRepository.findOne({ where: {} });
+
+    if (!settings) {
+      return res.status(404).json({ error: 'Configurações do site não encontradas' });
+    }
+
+    // Retorna apenas as configurações públicas
+    const publicSettings = {
+      siteName: settings.siteName,
+      logoUrl: settings.logoUrl,
+      faviconUrl: settings.faviconUrl,
+      footerText: settings.footerText,
+      contactEmail: settings.contactEmail,
+      primaryColor: settings.primaryColor,
+      secondaryColor: settings.secondaryColor,
+      heroGradientFrom: settings.heroGradientFrom,
+      heroGradientVia: settings.heroGradientVia,
+      heroGradientTo: settings.heroGradientTo,
+      facebookUrl: settings.facebookUrl,
+      instagramUrl: settings.instagramUrl,
+      twitterUrl: settings.twitterUrl,
+      linkedinUrl: settings.linkedinUrl,
+      youtubeUrl: settings.youtubeUrl
+    };
+
+    res.json(publicSettings);
+  } catch (error) {
+    console.error('Erro ao buscar configurações do site:', error);
+    res.status(500).json({ 
+      error: 'Erro ao buscar configurações do site',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+});
+
 // Handle React routing, return all requests to React app
 app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));

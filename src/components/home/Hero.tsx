@@ -1,12 +1,21 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 export default function Hero() {
+  const { settings, loading } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
+  
   return (
     <section className="py-16 md:py-24 relative overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 opacity-60"></div>
+      <div 
+        className="absolute inset-0 opacity-60"
+        style={{
+          background: `linear-gradient(to bottom right, ${settings?.heroGradientFrom || '#dbeafe'}, ${settings?.heroGradientVia || '#faf5ff'}, ${settings?.heroGradientTo || '#e0e7ff'})`
+        }}
+      ></div>
       
       <div className="container-custom relative z-10">
         <div className="max-w-3xl mx-auto text-center">
@@ -18,7 +27,20 @@ export default function Hero() {
             com contribuição opcional.
           </p>
           <div className="animate-fade-in animate-delay-200">
-            <Button asChild size="lg" className="gradient-bg">
+            <Button 
+              asChild 
+              size="lg" 
+              className="text-white transition-colors duration-200"
+              style={{ 
+                backgroundColor: primaryColor,
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = `${primaryColor}dd`;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = primaryColor;
+              }}
+            >
               <Link to="/conteudos">Explorar Conteúdos</Link>
             </Button>
           </div>

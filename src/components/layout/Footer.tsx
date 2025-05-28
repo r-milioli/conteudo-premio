@@ -1,14 +1,22 @@
-
 import { Link } from "react-router-dom";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export default function Footer() {
+  const { settings, loading } = useSiteSettings();
+  const hoverColor = settings?.primaryColor || '#4361ee';
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="bg-gray-50 border-t py-12">
       <div className="container-custom">
         <div className="flex flex-col md:flex-row justify-between gap-8">
           <div className="max-w-xs">
-            <Link to="/" className="font-display font-semibold text-xl text-brand-blue">
-              Conteúdo Premium
+            <Link 
+              to="/" 
+              className="font-display font-semibold text-xl"
+              style={{ color: settings?.primaryColor || '#4361ee' }}
+            >
+              {loading ? "Carregando..." : settings?.siteName || "Conteúdo Premium"}
             </Link>
             <p className="mt-2 text-sm text-gray-600">
               Plataforma para criadores de conteúdo distribuírem seus materiais digitais com contribuição opcional.
@@ -20,12 +28,22 @@ export default function Footer() {
               <h3 className="font-medium text-sm">Links Rápidos</h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <Link to="/" className="text-sm text-gray-600 hover:text-brand-blue">
+                  <Link 
+                    to="/" 
+                    className="text-sm text-gray-600 transition-colors"
+                    onMouseOver={(e) => e.currentTarget.style.color = hoverColor}
+                    onMouseOut={(e) => e.currentTarget.style.color = '#4B5563'}
+                  >
                     Home
                   </Link>
                 </li>
                 <li>
-                  <Link to="/contato" className="text-sm text-gray-600 hover:text-brand-blue">
+                  <Link 
+                    to="/contato" 
+                    className="text-sm text-gray-600 transition-colors"
+                    onMouseOver={(e) => e.currentTarget.style.color = hoverColor}
+                    onMouseOut={(e) => e.currentTarget.style.color = '#4B5563'}
+                  >
                     Contato
                   </Link>
                 </li>
@@ -36,12 +54,22 @@ export default function Footer() {
               <h3 className="font-medium text-sm">Legal</h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <Link to="/termos" className="text-sm text-gray-600 hover:text-brand-blue">
+                  <Link 
+                    to="/termos" 
+                    className="text-sm text-gray-600 transition-colors"
+                    onMouseOver={(e) => e.currentTarget.style.color = hoverColor}
+                    onMouseOut={(e) => e.currentTarget.style.color = '#4B5563'}
+                  >
                     Termos de Uso
                   </Link>
                 </li>
                 <li>
-                  <Link to="/privacidade" className="text-sm text-gray-600 hover:text-brand-blue">
+                  <Link 
+                    to="/privacidade" 
+                    className="text-sm text-gray-600 transition-colors"
+                    onMouseOver={(e) => e.currentTarget.style.color = hoverColor}
+                    onMouseOut={(e) => e.currentTarget.style.color = '#4B5563'}
+                  >
                     Política de Privacidade
                   </Link>
                 </li>
@@ -50,9 +78,9 @@ export default function Footer() {
           </div>
         </div>
         
-        <div className="mt-12 border-t pt-6">
+        <div className="mt-8 border-t pt-8">
           <p className="text-sm text-gray-500 text-center">
-            © {new Date().getFullYear()} Conteúdo Premium. Todos os direitos reservados.
+            {loading ? "Carregando..." : settings?.footerText || `© ${currentYear} Conteúdo Premium. Todos os direitos reservados.`}
           </p>
         </div>
       </div>
