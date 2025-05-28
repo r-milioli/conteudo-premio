@@ -24,6 +24,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Settings, CreditCard, Webhook, Trash2, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 // Schema for webhook settings
 const webhookSettingsSchema = z.object({
@@ -87,6 +89,8 @@ const SiteSettings = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useAuth();
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
 
   // Webhook form
   const webhookForm = useForm<z.infer<typeof webhookSettingsSchema>>({
@@ -672,7 +676,18 @@ const SiteSettings = () => {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className={cn(
+                  "transition-colors",
+                  "hover:opacity-90"
+                )}
+                style={{ 
+                  backgroundColor: primaryColor,
+                  color: 'white'
+                }}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -783,7 +798,18 @@ const SiteSettings = () => {
                 </div>
               </div>
 
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className={cn(
+                  "transition-colors",
+                  "hover:opacity-90"
+                )}
+                style={{ 
+                  backgroundColor: primaryColor,
+                  color: 'white'
+                }}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -938,7 +964,18 @@ const SiteSettings = () => {
                 />
               </div>
 
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className={cn(
+                  "transition-colors",
+                  "hover:opacity-90"
+                )}
+                style={{ 
+                  backgroundColor: primaryColor,
+                  color: 'white'
+                }}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -53,6 +53,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 // Schema para validação do formulário de novo conteúdo
 const newContentSchema = z.object({
@@ -102,6 +104,8 @@ const ContentManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
 
   // Carregar conteúdos ao montar o componente
   useEffect(() => {
@@ -374,7 +378,17 @@ const ContentManagement = () => {
             Gerencie seus conteúdos digitais e páginas personalizadas.
           </p>
         </div>
-        <Button onClick={() => setIsNewContentDialogOpen(true)}>
+        <Button 
+          onClick={() => setIsNewContentDialogOpen(true)}
+          className={cn(
+            "transition-colors",
+            "hover:opacity-90"
+          )}
+          style={{ 
+            backgroundColor: primaryColor,
+            color: 'white'
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Novo Conteúdo
         </Button>
