@@ -11,6 +11,11 @@ interface SiteSettings {
   heroGradientFrom: string;
   heroGradientVia: string;
   heroGradientTo: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
+  youtubeUrl?: string;
   // ... outros campos conforme necessário
 }
 

@@ -1095,6 +1095,50 @@ app.get('/api/public/site-settings', async (_req: Request, res: Response) => {
   }
 });
 
+// Endpoint para receber mensagens do formulário de contato
+app.post('/api/public/contact', async (req: Request, res: Response) => {
+    try {
+        const { name, email, subject, message } = req.body;
+
+        // Validação básica
+        if (!name || !email || !subject || !message) {
+            return res.status(400).json({ 
+                error: 'Dados incompletos',
+                details: 'Todos os campos são obrigatórios'
+            });
+        }
+
+        // Validação de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ 
+                error: 'Email inválido',
+                details: 'Por favor, forneça um email válido'
+            });
+        }
+
+        // Dispara o evento de webhook para a mensagem de contato
+        await WebhookService.createEvent('contact.message.created', {
+            name,
+            email,
+            subject,
+            message,
+            timestamp: new Date().toISOString()
+        });
+
+        res.status(200).json({ 
+            message: 'Mensagem recebida com sucesso',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Erro ao processar mensagem de contato:', error);
+        res.status(500).json({ 
+            error: 'Erro interno do servidor',
+            details: error instanceof Error ? error.message : 'Erro desconhecido'
+        });
+    }
+});
+
 // Handle React routing, return all requests to React app
 app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
