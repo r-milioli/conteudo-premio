@@ -54,15 +54,13 @@ export const useMercadoPago = () => {
         cardExpirationMonth: paymentData.card.expiration_month,
         cardExpirationYear: paymentData.card.expiration_year,
         securityCode: paymentData.card.security_code,
-        identificationType: 'CPF',
+        identificationType: paymentData.card.cardholder.identification.type,
         identificationNumber: paymentData.card.cardholder.identification.number
       };
 
       console.log('Dados para geração do token:', cardTokenData);
 
-      const cardToken = await mp.createCardToken({
-        ...cardTokenData
-      });
+      const cardToken = await mp.createCardToken(cardTokenData);
 
       console.log('Token do cartão gerado:', cardToken);
 
@@ -71,7 +69,7 @@ export const useMercadoPago = () => {
       }
 
       // Identificar o método de pagamento baseado nos primeiros dígitos do cartão
-      const bin = cardToken.first_six_digits;
+      const bin = paymentData.card.number.replace(/\s/g, '').substring(0, 6);
       const paymentMethodResult = await mp.getPaymentMethods({
         bin: bin
       });

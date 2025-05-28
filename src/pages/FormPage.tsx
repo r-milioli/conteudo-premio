@@ -18,6 +18,9 @@ import { Loader2 } from "lucide-react";
 import { useMercadoPago } from "@/hooks/useMercadoPago";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { cn } from "@/lib/utils";
+import { useMercadoPagoPix } from "@/hooks/useMercadoPagoPix";
+import { PixModal } from "@/components/PixModal";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // Form schema for initial form
 const initialFormSchema = z.object({
@@ -56,6 +59,9 @@ const FormPage = () => {
   const mp = useMercadoPago();
   const { settings } = useSiteSettings();
   const primaryColor = settings?.primaryColor || '#4361ee';
+  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix'>('credit_card');
+  const [showPixModal, setShowPixModal] = useState(false);
+  const mpPix = useMercadoPagoPix();
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -117,24 +123,89 @@ const FormPage = () => {
     }
   }, [showCardFields]);
 
-  // Monitora mudanças no valor da contribuição
-  useEffect(() => {
-    const subscription = initialForm.watch((value, { name }) => {
-      if (name === 'contribuicao') {
-        const contribuicao = parseFloat(value.contribuicao?.replace(/[^\d,]/g, '').replace(',', '.') || '0');
-        setShowCardFields(contribuicao > 0);
+  const handlePixPayment = async (email: string, amount: number) => {
+    try {
+      const paymentData = {
+        transaction_amount: amount,
+        description: `Contribuição para ${content?.titulo}`,
+        payer: {
+          email: email,
+        }
+      };
+
+      const response = await mpPix.createPixPayment(paymentData);
+      setShowPixModal(true);
+
+      return response;
+    } catch (error) {
+      console.error('Erro ao criar pagamento PIX:', error);
+      throw error;
+    }
+  };
+
+  const handlePixSuccess = async () => {
+    if (mpPix.paymentId) {
+      try {
+        const contributionAmount = parseFloat(initialForm.getValues("contribuicao").replace(/[^\d,]/g, '').replace(',', '.'));
+        
+        const response = await fetch(`/api/public/contents/${slug}/access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: initialForm.getValues("email"),
+            contribution_amount: contributionAmount,
+            payment_id: mpPix.paymentId,
+            payment_status: 'approved',
+            payment_method: 'pix'
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Falha ao registrar o acesso');
+        }
+
+        navigate(`/entrega/${slug}`, {
+          state: {
+            email: initialForm.getValues("email"),
+            contribuicao: contributionAmount,
+            status: "approved",
+            payment_id: mpPix.paymentId,
+            payment_method: 'pix'
+          }
+        });
+
+        toast({
+          title: "Pagamento aprovado!",
+          description: "Seu acesso ao conteúdo foi liberado.",
+        });
+      } catch (error) {
+        console.error('Erro ao registrar acesso:', error);
+        toast({
+          title: "Erro ao registrar acesso",
+          description: "O pagamento foi aprovado, mas houve um erro ao registrar seu acesso. Por favor, entre em contato com o suporte.",
+          variant: "destructive"
+        });
       }
-    });
-    return () => subscription.unsubscribe();
-  }, [initialForm.watch]);
+    }
+  };
 
   const onInitialSubmit = async (values: z.infer<typeof initialFormSchema>) => {
     const contribuicao = parseFloat(values.contribuicao.replace(/[^\d,]/g, '').replace(',', '.'));
     
     try {
-      // Se for acesso gratuito, registra imediatamente
+      if (!values.email) {
+        toast({
+          title: "Email obrigatório",
+          description: "Por favor, preencha seu email para continuar.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       if (contribuicao === 0) {
-        // Registra o acesso
+        // Registra o acesso gratuito
         const response = await fetch(`/api/public/contents/${slug}/access`, {
           method: 'POST',
           headers: {
@@ -159,71 +230,8 @@ const FormPage = () => {
           } 
         });
       } else {
-        setIsSubmitting(true);
-        // Processar pagamento com todos os dados do cartão
-        try {
-          const paymentData = {
-            transaction_amount: contribuicao,
-            description: `Contribuição para ${content?.titulo}`,
-            payment_method_id: 'credit_card',
-            payer: {
-              email: values.email,
-            },
-            card: {
-              number: values.cardNumber?.replace(/\D/g, '') || '',
-              expiration_month: values.cardExpiry?.split('/')[0] || '',
-              expiration_year: '20' + (values.cardExpiry?.split('/')[1] || ''),
-              security_code: values.cardCvv,
-              cardholder: {
-                name: values.cardName,
-                identification: {
-                  type: 'CPF',
-                  number: values.cpf?.replace(/\D/g, '') || ''
-                }
-              }
-            }
-          };
-
-          const response = await mp.createPayment(paymentData);
-          
-          if (response.status === "approved") {
-            // Registra o acesso somente após a aprovação do pagamento
-            const accessResponse = await fetch(`/api/public/contents/${slug}/access`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: values.email,
-                contribution_amount: contribuicao,
-                payment_id: response.id,
-                payment_status: response.status
-              }),
-            });
-
-            if (!accessResponse.ok) {
-              throw new Error('Erro ao registrar acesso após pagamento');
-            }
-
-            navigate(`/entrega/${slug}`, { 
-              state: { 
-                email: values.email,
-                contribuicao: contribuicao,
-                status: "aprovado",
-                payment_id: response.id
-              } 
-            });
-          } else {
-            throw new Error('Pagamento não aprovado');
-          }
-        } catch (error) {
-          toast({
-            title: "Erro no pagamento",
-            description: "Houve um erro ao processar seu pagamento. Tente novamente.",
-            variant: "destructive"
-          });
-        }
-        setIsSubmitting(false);
+        // Se houver contribuição, mostra as opções de pagamento
+        setShowCardFields(true);
       }
     } catch (error) {
       console.error('Erro ao processar operação:', error);
@@ -235,13 +243,32 @@ const FormPage = () => {
     }
   };
 
+  const getPaymentErrorMessage = (status: string, statusDetail: string) => {
+    const errorMessages: { [key: string]: string } = {
+      'cc_rejected_high_risk': 'O pagamento foi rejeitado por questões de segurança. Por favor, use outro cartão ou escolha outro método de pagamento.',
+      'cc_rejected_bad_filled_security_code': 'O código de segurança está incorreto. Por favor, verifique e tente novamente.',
+      'cc_rejected_bad_filled_date': 'A data de validade está incorreta. Por favor, verifique e tente novamente.',
+      'cc_rejected_bad_filled_other': 'Alguma informação do cartão está incorreta. Por favor, verifique todos os dados.',
+      'cc_rejected_call_for_authorize': 'Você precisa autorizar o pagamento com sua operadora de cartão.',
+      'cc_rejected_insufficient_amount': 'O cartão não possui saldo suficiente.',
+      'cc_rejected_invalid_installments': 'O cartão não processa pagamentos parcelados.',
+      'cc_rejected_duplicated_payment': 'Você já realizou um pagamento com este valor. Se precisar pagar novamente, aguarde alguns minutos.',
+      'cc_rejected_card_disabled': 'Cartão desabilitado. Por favor, entre em contato com sua operadora.',
+      'cc_rejected_blacklist': 'O pagamento foi rejeitado. Por favor, escolha outro método de pagamento.'
+    };
+
+    return errorMessages[statusDetail] || 'Houve um erro ao processar seu pagamento. Por favor, tente novamente ou escolha outro método de pagamento.';
+  };
+
   const onCheckoutSubmit = async (values: z.infer<typeof checkoutFormSchema>) => {
     setIsSubmitting(true);
     
     try {
+      const amount = parseFloat(initialForm.getValues("contribuicao").replace(/[^\d,]/g, '').replace(',', '.'));
+      
       // Criar um objeto de pagamento para o Mercado Pago
       const paymentData = {
-        transaction_amount: parseFloat(initialForm.getValues("contribuicao").replace(",", ".")),
+        transaction_amount: amount,
         description: `Contribuição para ${content?.titulo}`,
         payment_method_id: 'credit_card',
         payer: {
@@ -266,26 +293,32 @@ const FormPage = () => {
       const response = await mp.createPayment(paymentData);
       
       if (response.status === "approved") {
-        // Atualiza o registro de acesso com as informações do pagamento
-        await fetch(`/api/public/contents/${slug}/access`, {
+        // Registra o acesso somente após a aprovação do pagamento
+        const accessResponse = await fetch(`/api/public/contents/${slug}/access`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             email: initialForm.getValues("email"),
-            contribution_amount: parseFloat(initialForm.getValues("contribuicao").replace(",", ".")),
+            contribution_amount: amount,
             payment_id: response.id,
-            payment_status: response.status
+            payment_status: response.status,
+            payment_method: 'credit_card'
           }),
         });
+
+        if (!accessResponse.ok) {
+          throw new Error('Falha ao registrar o acesso');
+        }
 
         navigate(`/entrega/${slug}`, { 
           state: { 
             email: initialForm.getValues("email"),
-            contribuicao: parseFloat(initialForm.getValues("contribuicao").replace(",", ".")),
-            status: "aprovado",
-            payment_id: response.id
+            contribuicao: amount,
+            status: response.status,
+            payment_id: response.id,
+            payment_method: 'credit_card'
           } 
         });
         
@@ -294,12 +327,14 @@ const FormPage = () => {
           description: "Seu acesso ao conteúdo foi liberado.",
         });
       } else {
-        throw new Error('Pagamento não aprovado');
+        const errorMessage = getPaymentErrorMessage(response.status, response.status_detail);
+        throw new Error(errorMessage);
       }
     } catch (error) {
+      console.error('Erro ao processar pagamento:', error);
       toast({
         title: "Erro no pagamento",
-        description: "Houve um erro ao processar seu pagamento. Tente novamente.",
+        description: error instanceof Error ? error.message : "Houve um erro ao processar seu pagamento. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -378,231 +413,281 @@ const FormPage = () => {
               <h2 className="text-xl font-semibold mb-4">
                 {showCardFields ? "Informações de Pagamento" : "Complete para acessar o conteúdo"}
               </h2>
-              <Form {...initialForm}>
-                <form onSubmit={initialForm.handleSubmit(onInitialSubmit)} className="space-y-4">
-                  <FormField
-                    control={initialForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="seu@email.com" 
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              // Quando o email é preenchido, atualiza o estado
-                              if (showCardFields) {
-                                initialForm.setValue('email', e.target.value);
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={initialForm.control}
-                    name="contribuicao"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contribuição (opcional)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="text"
-                            placeholder="R$ 0,00"
-                            {...field}
-                            onChange={(e) => {
-                              let value = e.target.value;
-                              value = value.replace(/[^\d,]/g, '');
-                              if (!value.startsWith('R$ ')) {
-                                value = 'R$ ' + value;
-                              }
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  {showCardFields && (
-                    <>
-                      <FormField
-                        control={initialForm.control}
-                        name="cardNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Número do Cartão</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text" 
-                                placeholder="1234 5678 9012 3456" 
-                                {...field}
-                                onChange={(e) => {
-                                  // Permite apenas números e espaços
-                                  const value = e.target.value.replace(/[^\d\s]/g, '');
-                                  // Limita a 19 caracteres (16 números + 3 espaços)
-                                  if (value.length <= 19) {
-                                    field.onChange(value);
-                                  }
-                                }}
-                                value={field.value || ''}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <div className="grid grid-cols-2 gap-4">
+              {/* Step 1: Initial Form */}
+              {!showCardFields ? (
+                <Form {...initialForm}>
+                  <form onSubmit={initialForm.handleSubmit(onInitialSubmit)} className="space-y-4">
+                    <FormField
+                      control={initialForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="seu@email.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={initialForm.control}
+                      name="contribuicao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contribuição (opcional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="text"
+                              placeholder="R$ 0,00"
+                              {...field}
+                              onChange={(e) => {
+                                let value = e.target.value;
+                                value = value.replace(/[^\d,]/g, '');
+                                if (!value.startsWith('R$ ')) {
+                                  value = 'R$ ' + value;
+                                }
+                                field.onChange(value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button 
+                      type="submit" 
+                      className={cn("w-full transition-colors", "hover:opacity-90")}
+                      style={{ backgroundColor: primaryColor, color: 'white' }}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processando...
+                        </>
+                      ) : "Continuar"}
+                    </Button>
+                  </form>
+                </Form>
+              ) : (
+                <>
+                  {/* Step 2: Payment Method Selection */}
+                  <div className="mb-6">
+                    <RadioGroup
+                      defaultValue="credit_card"
+                      onValueChange={(value) => setPaymentMethod(value as 'credit_card' | 'pix')}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div className="relative rounded-lg border p-4 cursor-pointer hover:border-primary">
+                        <RadioGroupItem value="credit_card" id="credit_card" className="absolute right-4 top-4" />
+                        <label htmlFor="credit_card" className="block cursor-pointer">
+                          <span className="font-medium block mb-1">Cartão de Crédito</span>
+                          <span className="text-sm text-gray-500">Pagamento em até 12x</span>
+                        </label>
+                      </div>
+                      <div className="relative rounded-lg border p-4 cursor-pointer hover:border-primary">
+                        <RadioGroupItem value="pix" id="pix" className="absolute right-4 top-4" />
+                        <label htmlFor="pix" className="block cursor-pointer">
+                          <span className="font-medium block mb-1">PIX</span>
+                          <span className="text-sm text-gray-500">Pagamento instantâneo</span>
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Step 3: Payment Form */}
+                  {paymentMethod === 'credit_card' ? (
+                    <Form {...checkoutForm}>
+                      <form onSubmit={checkoutForm.handleSubmit(onCheckoutSubmit)} className="space-y-4">
+                        {/* Credit Card Form Fields */}
                         <FormField
-                          control={initialForm.control}
-                          name="cardExpiry"
+                          control={checkoutForm.control}
+                          name="cardNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Validade</FormLabel>
+                              <FormLabel>Número do Cartão</FormLabel>
                               <FormControl>
                                 <Input 
-                                  placeholder="MM/AA" 
+                                  placeholder="1234 5678 9012 3456" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/[^\d\s]/g, '');
+                                    if (value.length <= 19) {
+                                      field.onChange(value);
+                                    }
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={checkoutForm.control}
+                            name="cardExpiry"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Validade</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="MM/AA" 
+                                    {...field}
+                                    onChange={(e) => {
+                                      let value = e.target.value.replace(/\D/g, '');
+                                      if (value.length >= 2) {
+                                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                      }
+                                      if (value.length <= 5) {
+                                        field.onChange(value);
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={checkoutForm.control}
+                            name="cardCvv"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>CVV</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="123" 
+                                    {...field}
+                                    maxLength={4}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(/\D/g, '');
+                                      if (value.length <= 4) {
+                                        field.onChange(value);
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <FormField
+                          control={checkoutForm.control}
+                          name="cardName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nome no Cartão</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="NOME COMPLETO" 
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = e.target.value.toUpperCase();
+                                    field.onChange(value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={checkoutForm.control}
+                          name="cpf"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CPF</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="123.456.789-00" 
                                   {...field}
                                   onChange={(e) => {
                                     let value = e.target.value.replace(/\D/g, '');
-                                    if (value.length >= 2) {
-                                      value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                    if (value.length > 0) {
+                                      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                                      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
                                     }
-                                    if (value.length <= 5) {
+                                    if (value.length <= 14) {
                                       field.onChange(value);
                                     }
                                   }}
-                                  value={field.value || ''}
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={initialForm.control}
-                          name="cardCvv"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>CVV</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  placeholder="123" 
-                                  {...field}
-                                  onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '');
-                                    if (value.length <= 4) {
-                                      field.onChange(value);
-                                    }
-                                  }}
-                                  value={field.value || ''}
-                                  maxLength={4}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        control={initialForm.control}
-                        name="cardName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome no Cartão</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="NOME COMPLETO" 
-                                {...field}
-                                onChange={(e) => {
-                                  const value = e.target.value.toUpperCase();
-                                  field.onChange(value);
-                                }}
-                                value={field.value || ''}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={initialForm.control}
-                        name="cpf"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CPF</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="123.456.789-00" 
-                                {...field}
-                                onChange={(e) => {
-                                  let value = e.target.value.replace(/\D/g, '');
-                                  if (value.length > 0) {
-                                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
-                                    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                                  }
-                                  if (value.length <= 14) {
-                                    field.onChange(value);
-                                  }
-                                }}
-                                value={field.value || ''}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
+                        <Button 
+                          type="submit" 
+                          className={cn("w-full transition-colors", "hover:opacity-90")}
+                          style={{ backgroundColor: primaryColor, color: 'white' }}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Processando...
+                            </>
+                          ) : "Finalizar Pagamento"}
+                        </Button>
+                      </form>
+                    </Form>
+                  ) : (
+                    // Formulário PIX
+                    <div className="space-y-4">
+                      <Button 
+                        type="button"
+                        className={cn("w-full transition-colors", "hover:opacity-90")}
+                        style={{ backgroundColor: primaryColor, color: 'white' }}
+                        disabled={isSubmitting}
+                        onClick={() => {
+                          const amount = parseFloat(initialForm.getValues("contribuicao").replace(/[^\d,]/g, '').replace(',', '.'));
+                          const email = initialForm.getValues("email");
+                          handlePixPayment(email, amount);
+                        }}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processando...
+                          </>
+                        ) : "Gerar QR Code PIX"}
+                      </Button>
+                    </div>
                   )}
 
                   <Button 
-                    type="submit" 
-                    className={cn(
-                      "w-full transition-colors",
-                      "hover:opacity-90"
-                    )}
-                    style={{ 
-                      backgroundColor: primaryColor,
-                      color: 'white'
+                    type="button" 
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => {
+                      setShowCardFields(false);
+                      initialForm.reset();
                     }}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {showCardFields ? "Processando pagamento..." : "Processando..."}
-                      </>
-                    ) : (
-                      showCardFields ? "Finalizar Pagamento" : "Continuar"
-                    )}
+                    Voltar
                   </Button>
-
-                  {showCardFields && (
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        setShowCardFields(false);
-                        initialForm.reset();
-                      }}
-                      disabled={isSubmitting}
-                    >
-                      Voltar
-                    </Button>
-                  )}
-                </form>
-              </Form>
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      <PixModal
+        isOpen={showPixModal}
+        onClose={() => setShowPixModal(false)}
+        qrCode={mpPix.qrCode}
+        qrCodeBase64={mpPix.qrCodeBase64}
+        paymentId={mpPix.paymentId}
+        onPaymentSuccess={handlePixSuccess}
+        checkStatus={mpPix.checkPixStatus}
+      />
     </div>
   );
 };

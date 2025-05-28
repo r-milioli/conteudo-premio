@@ -1139,6 +1139,97 @@ app.post('/api/public/contact', async (req: Request, res: Response) => {
     }
 });
 
+// Endpoint para criar pagamento PIX
+app.post('/api/payments/pix/create', async (req: Request, res: Response) => {
+  try {
+    const {
+      transaction_amount,
+      description,
+      payer
+    } = req.body;
+
+    // Validar dados obrigatórios
+    if (!transaction_amount || !payer.email) {
+      return res.status(400).json({
+        error: 'Dados de pagamento incompletos',
+        details: 'Valor e email são obrigatórios'
+      });
+    }
+
+    // Gerar uma chave de idempotência única
+    const idempotencyKey = `pix-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+    // Criar pagamento PIX no Mercado Pago
+    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify({
+        transaction_amount: Number(transaction_amount),
+        description,
+        payment_method_id: 'pix',
+        payer,
+        installments: 1,
+        binary_mode: true
+      })
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('Erro do Mercado Pago:', responseData);
+      return res.status(response.status).json(responseData);
+    }
+
+    // Retorna os dados do PIX
+    res.json({
+      id: responseData.id,
+      qr_code: responseData.point_of_interaction.transaction_data.qr_code,
+      qr_code_base64: responseData.point_of_interaction.transaction_data.qr_code_base64,
+      status: responseData.status
+    });
+  } catch (error) {
+    console.error('Erro ao criar pagamento PIX:', error);
+    res.status(500).json({
+      error: 'Erro ao criar pagamento PIX',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+});
+
+// Endpoint para verificar status do PIX
+app.get('/api/payments/pix/status/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar status do pagamento');
+    }
+
+    const payment = await response.json();
+
+    res.json({
+      status: payment.status,
+      status_detail: payment.status_detail
+    });
+  } catch (error) {
+    console.error('Erro ao verificar status do PIX:', error);
+    res.status(500).json({
+      error: 'Erro ao verificar status do PIX',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    });
+  }
+});
+
 // Handle React routing, return all requests to React app
 app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
