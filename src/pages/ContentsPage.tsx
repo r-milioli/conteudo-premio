@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { User, Download } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 interface Content {
   id: number;
@@ -18,6 +20,8 @@ interface Content {
 const ContentsPage = () => {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
 
   useEffect(() => {
     const fetchContents = async () => {
@@ -89,7 +93,17 @@ const ContentsPage = () => {
                 </div>
               </CardHeader>
               <CardFooter>
-                <Button asChild className="w-full">
+                <Button 
+                  asChild 
+                  className={cn(
+                    "w-full transition-colors",
+                    "hover:opacity-90"
+                  )}
+                  style={{ 
+                    backgroundColor: primaryColor,
+                    color: 'white'
+                  }}
+                >
                   <Link to={`/conteudo/${content.slug}`}>Acessar Conteúdo</Link>
                 </Button>
               </CardFooter>

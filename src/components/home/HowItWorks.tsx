@@ -1,25 +1,28 @@
-
 import { CheckCircle, CreditCard, Download } from "lucide-react";
-
-const steps = [
-  {
-    icon: <CheckCircle className="h-8 w-8 text-brand-blue" />,
-    title: "Escolha o Conteúdo",
-    description: "Navegue pela nossa biblioteca e escolha o material que vai te ajudar a crescer"
-  },
-  {
-    icon: <CreditCard className="h-8 w-8 text-brand-blue" />,
-    title: "Contribuição Opcional",
-    description: "Defina quanto deseja contribuir - até mesmo R$0,00 se preferir"
-  },
-  {
-    icon: <Download className="h-8 w-8 text-brand-blue" />,
-    title: "Acesso Imediato",
-    description: "Receba acesso instantâneo ao conteúdo premium após sua contribuição"
-  }
-];
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export default function HowItWorks() {
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
+
+  const steps = [
+    {
+      icon: <CheckCircle className="h-8 w-8" style={{ color: primaryColor }} />,
+      title: "Escolha o Conteúdo",
+      description: "Navegue pela nossa biblioteca e escolha o material que vai te ajudar a crescer"
+    },
+    {
+      icon: <CreditCard className="h-8 w-8" style={{ color: primaryColor }} />,
+      title: "Contribuição Opcional",
+      description: "Defina quanto deseja contribuir - até mesmo R$0,00 se preferir"
+    },
+    {
+      icon: <Download className="h-8 w-8" style={{ color: primaryColor }} />,
+      title: "Acesso Imediato",
+      description: "Receba acesso instantâneo ao conteúdo premium após sua contribuição"
+    }
+  ];
+
   return (
     <section className="py-16">
       <div className="container-custom">

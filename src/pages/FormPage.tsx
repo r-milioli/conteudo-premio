@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useMercadoPago } from "@/hooks/useMercadoPago";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 // Form schema for initial form
 const initialFormSchema = z.object({
@@ -52,6 +54,8 @@ const FormPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const mp = useMercadoPago();
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -559,7 +563,14 @@ const FormPage = () => {
 
                   <Button 
                     type="submit" 
-                    className="w-full"
+                    className={cn(
+                      "w-full transition-colors",
+                      "hover:opacity-90"
+                    )}
+                    style={{ 
+                      backgroundColor: primaryColor,
+                      color: 'white'
+                    }}
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
