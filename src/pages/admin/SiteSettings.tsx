@@ -82,6 +82,8 @@ const availableEvents = [
   { id: "access_granted", label: "Acesso Liberado" },
   { id: "content_created", label: "Conteúdo Criado" },
   { id: "content_updated", label: "Conteúdo Atualizado" },
+  { id: "content_published", label: "Conteúdo Publicado" },
+  { id: "content.access.created", label: "Acesso ao Conteúdo Criado" },
 ];
 
 const SiteSettings = () => {
@@ -132,26 +134,42 @@ const SiteSettings = () => {
         }
         const data = await response.json();
         
-        // Atualiza formulário geral
-        generalForm.reset(data);
+        // Atualiza formulário geral com valores padrão para campos nulos
+        generalForm.reset({
+          siteName: data.siteName || '',
+          logoUrl: data.logoUrl || '',
+          faviconUrl: data.faviconUrl || '',
+          footerText: data.footerText || '',
+          contactEmail: data.contactEmail || '',
+          primaryColor: data.primaryColor || '#4361ee',
+          secondaryColor: data.secondaryColor || '#3f37c9',
+          heroGradientFrom: data.heroGradientFrom || '#dbeafe',
+          heroGradientVia: data.heroGradientVia || '#faf5ff',
+          heroGradientTo: data.heroGradientTo || '#e0e7ff',
+          facebookUrl: data.facebookUrl || '',
+          instagramUrl: data.instagramUrl || '',
+          twitterUrl: data.twitterUrl || '',
+          linkedinUrl: data.linkedinUrl || '',
+          youtubeUrl: data.youtubeUrl || ''
+        });
         
-        // Atualiza formulário de checkout
+        // Atualiza formulário de checkout com valores padrão para campos nulos
         checkoutForm.reset({
-          checkoutTitle: data.checkoutTitle,
-          checkoutDescription: data.checkoutDescription,
-          paymentButtonText: data.paymentButtonText,
-          successMessage: data.successMessage,
-          merchantName: data.merchantName,
-          merchantId: data.merchantId,
+          checkoutTitle: data.checkoutTitle || '',
+          checkoutDescription: data.checkoutDescription || '',
+          paymentButtonText: data.paymentButtonText || '',
+          successMessage: data.successMessage || '',
+          merchantName: data.merchantName || '',
+          merchantId: data.merchantId || ''
         });
 
-        // Atualiza formulário de webhook
+        // Atualiza formulário de webhook com valores padrão para campos nulos
         webhookForm.reset({
           webhookUrl: data.webhookUrl || '',
           secretKey: data.secretKey || '',
           enabledEvents: JSON.parse(data.enabledEvents || '[]'),
           retryAttempts: data.retryAttempts || 3,
-          timeout: data.timeout || 10,
+          timeout: data.timeout || 10
         });
       } catch (error) {
         console.error('Erro ao carregar configurações:', error);

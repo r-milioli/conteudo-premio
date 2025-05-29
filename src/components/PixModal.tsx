@@ -8,6 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 interface PixModalProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ export function PixModal({
 }: PixModalProps) {
   const [isChecking, setIsChecking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutos em segundos
+  const { settings } = useSiteSettings();
+  const primaryColor = settings?.primaryColor || '#4361ee';
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -129,7 +133,14 @@ export function PixModal({
           </div>
           <Button
             onClick={copyToClipboard}
-            className="w-full"
+            className={cn(
+              "w-full transition-colors",
+              "hover:opacity-90"
+            )}
+            style={{ 
+              backgroundColor: primaryColor,
+              color: 'white'
+            }}
             disabled={!qrCode || isChecking}
           >
             {isChecking ? (

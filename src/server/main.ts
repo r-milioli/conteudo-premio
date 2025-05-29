@@ -284,6 +284,29 @@ app.get('/api/contents', authenticateToken, async (req: Request, res: Response) 
     try {
         const contentRepository = AppDataSource.getRepository(Content);
         const contents = await contentRepository.find({
+            select: [
+                'id',
+                'title',
+                'description',
+                'slug',
+                'status',
+                'thumbnail_url',
+                'banner_image_url',
+                'capture_page_title',
+                'capture_page_description',
+                'capture_page_video_url',
+                'capture_page_html',
+                'delivery_page_title',
+                'delivery_page_description',
+                'delivery_page_video_url',
+                'delivery_page_html',
+                'download_link',
+                'is_active',
+                'access_count',
+                'download_count',
+                'created_at',
+                'updated_at'
+            ],
             order: {
                 created_at: 'DESC'
             }
@@ -458,10 +481,22 @@ app.put('/api/contents/:id/status', authenticateToken, async (req: Request, res:
             return res.status(404).json({ error: 'Conteúdo não encontrado' });
         }
 
+        const oldStatus = content.status;
         content.status = status;
         content.updated_at = new Date();
 
         await contentRepository.save(content);
+
+        // Dispara o evento apenas quando o conteúdo é publicado
+        if (status === 'published' && oldStatus === 'draft') {
+            await WebhookService.createEvent('content_published', {
+                content_id: content.id,
+                title: content.title,
+                slug: content.slug,
+                status: content.status,
+                published_at: new Date().toISOString()
+            });
+        }
         
         res.json(content);
     } catch (error) {

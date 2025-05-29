@@ -95,7 +95,20 @@ interface Content {
   updated_at: string;
   downloads: number;
   accesses: number;
+  access_count: number;
+  download_count: number;
 }
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
 const ContentManagement = () => {
   const [contents, setContents] = useState<Content[]>([]);
@@ -219,24 +232,23 @@ const ContentManagement = () => {
   };
 
   const handleEdit = (id: number) => {
-    const contentToEdit = contents.find(content => content.id === id);
-    if (contentToEdit) {
-      setSelectedContent(contentToEdit);
-      // Preenche o formulário com os dados do conteúdo selecionado
+    const content = contents.find(c => c.id === id);
+    if (content) {
+      setSelectedContent(content);
       editForm.reset({
-        title: contentToEdit.title,
-        description: contentToEdit.description,
-        thumbnailUrl: contentToEdit.thumbnail_url || "",
-        bannerImageUrl: contentToEdit.banner_image_url || "",
-        capturePageTitle: contentToEdit.capture_page_title || "",
-        capturePageDescription: contentToEdit.capture_page_description || "",
-        capturePageVideoUrl: contentToEdit.capture_page_video_url || "",
-        capturePageHtml: contentToEdit.capture_page_html || "",
-        deliveryPageTitle: contentToEdit.delivery_page_title || "",
-        deliveryPageDescription: contentToEdit.delivery_page_description || "",
-        deliveryPageVideoUrl: contentToEdit.delivery_page_video_url || "",
-        deliveryPageHtml: contentToEdit.delivery_page_html || "",
-        downloadLink: contentToEdit.download_link || "",
+        title: content.title || '',
+        description: content.description || '',
+        thumbnailUrl: content.thumbnail_url || '',
+        bannerImageUrl: content.banner_image_url || '',
+        capturePageTitle: content.capture_page_title || '',
+        capturePageDescription: content.capture_page_description || '',
+        capturePageVideoUrl: content.capture_page_video_url || '',
+        capturePageHtml: content.capture_page_html || '',
+        deliveryPageTitle: content.delivery_page_title || '',
+        deliveryPageDescription: content.delivery_page_description || '',
+        deliveryPageVideoUrl: content.delivery_page_video_url || '',
+        deliveryPageHtml: content.delivery_page_html || '',
+        downloadLink: content.download_link || ''
       });
       setIsEditContentDialogOpen(true);
     }
@@ -370,18 +382,18 @@ const ContentManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-4 sm:p-6 md:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciar Conteúdos</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Conteúdos</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Gerencie seus conteúdos digitais e páginas personalizadas.
           </p>
         </div>
         <Button 
           onClick={() => setIsNewContentDialogOpen(true)}
           className={cn(
-            "transition-colors",
+            "transition-colors w-full sm:w-auto",
             "hover:opacity-90"
           )}
           style={{ 
@@ -406,29 +418,32 @@ const ContentManagement = () => {
       ) : (
         <div className="grid gap-4 grid-cols-1">
           {contents.map((content) => (
-            <Card key={content.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle>{content.title}</CardTitle>
-                    <CardDescription>{content.description}</CardDescription>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
+            <Card key={content.id} className="overflow-hidden">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="space-y-2 w-full sm:w-auto">
+                    <CardTitle className="text-lg sm:text-xl break-words">{content.title}</CardTitle>
+                    <CardDescription className="text-sm break-words">{content.description}</CardDescription>
+                    <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-500 mt-2">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {content.created_at}
+                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                        {formatDate(content.created_at)}
                       </div>
                       <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        {content.accesses} acessos
+                        <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                        {content.access_count} acessos
                       </div>
                       <div className="flex items-center gap-1">
-                        <Download className="h-4 w-4" />
-                        {content.downloads} downloads
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                        {content.download_count} downloads
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={content.status === 'published' ? 'default' : 'secondary'}>
+                  <div className="flex items-center gap-2 self-start">
+                    <Badge 
+                      variant={content.status === 'published' ? 'default' : 'secondary'}
+                      className="text-xs sm:text-sm whitespace-nowrap"
+                    >
                       {content.status === 'published' ? 'Publicado' : 'Rascunho'}
                     </Badge>
                     <DropdownMenu>
@@ -438,36 +453,36 @@ const ContentManagement = () => {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleEdit(content.id)}>
-                          <Edit className="mr-2 h-4 w-4" />
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel className="text-xs sm:text-sm">Ações</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEdit(content.id)} className="text-xs sm:text-sm">
+                          <Edit className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Editar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(content.id)}>
-                          <Eye className="mr-2 h-4 w-4" />
+                        <DropdownMenuItem onClick={() => handleToggleStatus(content.id)} className="text-xs sm:text-sm">
+                          <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           {content.status === 'published' ? 'Tornar Rascunho' : 'Publicar'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Visualizar Páginas</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleViewContent(content.slug)}>
-                          <Eye className="mr-2 h-4 w-4" />
+                        <DropdownMenuLabel className="text-xs sm:text-sm">Visualizar Páginas</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleViewContent(content.slug)} className="text-xs sm:text-sm">
+                          <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Página de Conteúdo
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewDonation(content.slug)}>
-                          <Gift className="mr-2 h-4 w-4" />
+                        <DropdownMenuItem onClick={() => handleViewDonation(content.slug)} className="text-xs sm:text-sm">
+                          <Gift className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Página de Doação
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)}>
-                          <Download className="mr-2 h-4 w-4" />
+                        <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)} className="text-xs sm:text-sm">
+                          <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Página de Entrega
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleDelete(content.id)}
-                          className="text-red-600"
+                          className="text-red-600 text-xs sm:text-sm"
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -696,7 +711,18 @@ const ContentManagement = () => {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className={cn(
+                    "transition-colors",
+                    "hover:opacity-90"
+                  )}
+                  style={{ 
+                    backgroundColor: primaryColor,
+                    color: 'white'
+                  }}
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
