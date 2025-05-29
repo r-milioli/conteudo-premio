@@ -497,7 +497,7 @@ const ContentManagement = () => {
 
       {/* Modal de Novo Conteúdo */}
       <Dialog open={isNewContentDialogOpen} onOpenChange={setIsNewContentDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Novo Conteúdo</DialogTitle>
             <DialogDescription>
@@ -508,10 +508,10 @@ const ContentManagement = () => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
-                  <TabsTrigger value="capture">Página de Captura</TabsTrigger>
-                  <TabsTrigger value="delivery">Página de Entrega</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="basic" className="text-xs sm:text-sm">Informações Básicas</TabsTrigger>
+                  <TabsTrigger value="capture" className="text-xs sm:text-sm">Página de Captura</TabsTrigger>
+                  <TabsTrigger value="delivery" className="text-xs sm:text-sm">Página de Entrega</TabsTrigger>
                 </TabsList>
 
                 {/* Aba de Informações Básicas */}
@@ -677,9 +677,32 @@ const ContentManagement = () => {
                         <FormItem>
                           <FormLabel>URL do Vídeo</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                            <Input placeholder="Ex: https://youtube.com/embed/..." {...field} />
                           </FormControl>
-                          <FormDescription>Link do vídeo de boas-vindas (opcional)</FormDescription>
+                          <FormDescription>
+                            Cole a URL do vídeo incorporado (embed) do YouTube ou Vimeo
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="deliveryPageHtml"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Conteúdo HTML</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Adicione conteúdo HTML personalizado..."
+                              className="min-h-[150px] font-mono text-sm"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Adicione conteúdo HTML personalizado que será exibido na página de entrega
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -690,11 +713,13 @@ const ContentManagement = () => {
                       name="downloadLink"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Link de Download</FormLabel>
+                          <FormLabel>Link para Download</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://exemplo.com/arquivo.pdf" {...field} />
+                            <Input placeholder="Ex: https://drive.google.com/..." {...field} />
                           </FormControl>
-                          <FormDescription>Link direto para download do conteúdo</FormDescription>
+                          <FormDescription>
+                            Link direto para download do conteúdo
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -740,7 +765,7 @@ const ContentManagement = () => {
 
       {/* Modal de Edição de Conteúdo */}
       <Dialog open={isEditContentDialogOpen} onOpenChange={setIsEditContentDialogOpen}>
-        <DialogContent className="sm:max-w-[800px]">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Conteúdo</DialogTitle>
             <DialogDescription>
@@ -751,10 +776,10 @@ const ContentManagement = () => {
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
-                  <TabsTrigger value="capture">Página de Captura</TabsTrigger>
-                  <TabsTrigger value="delivery">Página de Entrega</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="basic" className="text-xs sm:text-sm">Informações Básicas</TabsTrigger>
+                  <TabsTrigger value="capture" className="text-xs sm:text-sm">Página de Captura</TabsTrigger>
+                  <TabsTrigger value="delivery" className="text-xs sm:text-sm">Página de Entrega</TabsTrigger>
                 </TabsList>
 
                 {/* Aba de Informações Básicas */}
@@ -920,9 +945,32 @@ const ContentManagement = () => {
                         <FormItem>
                           <FormLabel>URL do Vídeo</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                            <Input placeholder="Ex: https://youtube.com/embed/..." {...field} />
                           </FormControl>
-                          <FormDescription>Link do vídeo de boas-vindas (opcional)</FormDescription>
+                          <FormDescription>
+                            Cole a URL do vídeo incorporado (embed) do YouTube ou Vimeo
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="deliveryPageHtml"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Conteúdo HTML</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Adicione conteúdo HTML personalizado..."
+                              className="min-h-[150px] font-mono text-sm"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Adicione conteúdo HTML personalizado que será exibido na página de entrega
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -933,11 +981,13 @@ const ContentManagement = () => {
                       name="downloadLink"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Link de Download</FormLabel>
+                          <FormLabel>Link para Download</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://exemplo.com/arquivo.pdf" {...field} />
+                            <Input placeholder="Ex: https://drive.google.com/..." {...field} />
                           </FormControl>
-                          <FormDescription>Link direto para download do conteúdo</FormDescription>
+                          <FormDescription>
+                            Link direto para download do conteúdo
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
