@@ -136,26 +136,26 @@ const DeliveryPage = () => {
 
       {/* Card com informações do conteúdo */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
-        {content.thumbnail && (
+        {content.banner_image_url && (
           <div className="w-full h-48 md:h-64 overflow-hidden">
             <img 
-              src={content.thumbnail} 
-              alt={content.titulo} 
+              src={content.banner_image_url} 
+              alt={content.delivery_page_title || content.titulo} 
               className="w-full h-full object-cover"
             />
           </div>
         )}
         <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">{content.titulo}</h2>
-          <p className="text-gray-600 mb-6">{content.descricao}</p>
+          <h2 className="text-2xl font-bold mb-4">{content.delivery_page_title || content.titulo}</h2>
+          <p className="text-gray-600 mb-6">{content.delivery_page_description || content.descricao}</p>
           
           {/* Video player se existir */}
-          {content.videoUrl && (
+          {content.delivery_page_video_url && (
             <div className="aspect-video w-full overflow-hidden rounded-lg mb-6">
               <iframe 
                 width="100%" 
                 height="100%" 
-                src={content.videoUrl} 
+                src={content.delivery_page_video_url} 
                 title="Video preview"
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -166,10 +166,10 @@ const DeliveryPage = () => {
           )}
 
           {/* Conteúdo HTML personalizado se existir */}
-          {content.deliveryPageHtml && (
+          {content.delivery_page_html && (
             <div 
               className="prose max-w-none mb-6"
-              dangerouslySetInnerHTML={{ __html: content.deliveryPageHtml }} 
+              dangerouslySetInnerHTML={{ __html: content.delivery_page_html }} 
             />
           )}
         </div>

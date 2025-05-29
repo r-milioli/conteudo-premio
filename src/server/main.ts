@@ -560,12 +560,14 @@ app.get('/api/public/contents/:slug/form', async (req: Request, res: Response) =
 
         res.json({
             id: content.id,
-            titulo: content.title,
-            descricao: content.description,
+            titulo: content.capture_page_title || content.title,
+            descricao: content.capture_page_description || content.description,
             slug: content.slug,
             thumbnail: content.thumbnail_url,
-            videoUrl: content.capture_page_video_url,
-            formHtml: content.capture_page_html
+            capture_page_title: content.capture_page_title,
+            capture_page_description: content.capture_page_description,
+            capture_page_video_url: content.capture_page_video_url,
+            capture_page_html: content.capture_page_html
         });
     } catch (error) {
         console.error('Erro ao buscar dados do formulário:', error);
@@ -605,12 +607,14 @@ app.get('/api/public/contents/:slug/delivery', async (req: Request, res: Respons
 
         res.json({
             id: content.id,
-            titulo: content.title,
-            descricao: content.description,
+            titulo: content.delivery_page_title || content.title,
+            descricao: content.delivery_page_description || content.description,
             slug: content.slug,
-            thumbnail: content.thumbnail_url,
-            videoUrl: content.delivery_page_video_url,
-            deliveryHtml: content.delivery_page_html,
+            banner_image_url: content.banner_image_url,
+            delivery_page_title: content.delivery_page_title,
+            delivery_page_description: content.delivery_page_description,
+            delivery_page_video_url: content.delivery_page_video_url,
+            delivery_page_html: content.delivery_page_html,
             downloadLink: content.download_link
         });
     } catch (error) {

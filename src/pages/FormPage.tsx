@@ -127,7 +127,7 @@ const FormPage = () => {
     try {
       const paymentData = {
         transaction_amount: amount,
-        description: `Contribuição para ${content?.titulo}`,
+        description: `Contribuição para ${content?.capture_page_title || content?.titulo}`,
         payer: {
           email: email,
         }
@@ -269,7 +269,7 @@ const FormPage = () => {
       // Criar um objeto de pagamento para o Mercado Pago
       const paymentData = {
         transaction_amount: amount,
-        description: `Contribuição para ${content?.titulo}`,
+        description: `Contribuição para ${content?.capture_page_title || content?.titulo}`,
         payment_method_id: 'credit_card',
         payer: {
           email: initialForm.getValues("email"),
@@ -370,25 +370,25 @@ const FormPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column - Content presentation */}
           <div className="space-y-6">
-            <h1 className="text-3xl font-bold mb-2">{content.titulo}</h1>
-            <p className="text-gray-600 mb-4">{content.descricao}</p>
+            <h1 className="text-3xl font-bold mb-2">{content.capture_page_title || content.titulo}</h1>
+            <p className="text-gray-600 mb-4">{content.capture_page_description || content.descricao}</p>
             
             {/* Featured image */}
             <div className="aspect-video w-full overflow-hidden rounded-lg mb-6">
               <img 
                 src={content.thumbnail} 
-                alt={content.titulo} 
+                alt={content.capture_page_title || content.titulo} 
                 className="w-full h-full object-cover"
               />
             </div>
             
             {/* Video player */}
-            {content.videoUrl && (
+            {content.capture_page_video_url && (
               <div className="aspect-video w-full overflow-hidden rounded-lg">
                 <iframe 
                   width="100%" 
                   height="100%" 
-                  src={content.videoUrl} 
+                  src={content.capture_page_video_url} 
                   title="Video preview"
                   frameBorder="0" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -399,10 +399,10 @@ const FormPage = () => {
             )}
             
             {/* Custom HTML content */}
-            {content.formHtml && (
+            {content.capture_page_html && (
               <div 
                 className="prose max-w-none mt-6"
-                dangerouslySetInnerHTML={{ __html: content.formHtml }} 
+                dangerouslySetInnerHTML={{ __html: content.capture_page_html }} 
               />
             )}
           </div>
