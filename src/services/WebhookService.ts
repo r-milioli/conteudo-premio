@@ -42,7 +42,14 @@ export class WebhookService {
         }
 
         // Bypass enabledEvents check for Mercado Pago and contact form events
-        const bypassEvents = ['payment_success', 'payment_failure', 'contact.message.created'];
+        const bypassEvents = [
+            'payment_success', 
+            'payment_failure', 
+            'contact.message.created',
+            'review.created',
+            'review.approved',
+            'review.deleted'
+        ];
         const enabledEvents = JSON.parse(settings.enabledEvents || "[]");
         
         if (!bypassEvents.includes(eventType) && !enabledEvents.includes(eventType)) {

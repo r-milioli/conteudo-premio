@@ -84,6 +84,9 @@ const availableEvents = [
   { id: "content_updated", label: "Conteúdo Atualizado" },
   { id: "content_published", label: "Conteúdo Publicado" },
   { id: "content.access.created", label: "Acesso ao Conteúdo Criado" },
+  { id: "review.created", label: "Avaliação Criada" },
+  { id: "review.approved", label: "Avaliação Aprovada" },
+  { id: "review.deleted", label: "Avaliação Excluída" }
 ];
 
 const SiteSettings = () => {

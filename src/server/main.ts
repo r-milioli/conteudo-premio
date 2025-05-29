@@ -1294,6 +1294,24 @@ app.post("/api/public/contents/:slug/reviews", async (req, res) => {
 
         await AppDataSource.getRepository(Review).save(review);
 
+        // Dispara o webhook de criação de avaliação
+        await WebhookService.createEvent('review.created', {
+            review: {
+                id: review.id,
+                comment: review.comment,
+                rating: review.rating,
+                user_name: review.user_name,
+                user_email: review.user_email,
+                created_at: review.created_at,
+                is_approved: review.is_approved
+            },
+            content: {
+                id: content.id,
+                title: content.title,
+                slug: content.slug
+            }
+        });
+
         res.json({ message: "Avaliação enviada com sucesso!" });
     } catch (error) {
         console.error("Erro ao salvar avaliação:", error);
@@ -1353,7 +1371,10 @@ app.put("/api/admin/reviews/:id/approve", async (req, res) => {
     try {
         const { id } = req.params;
         const review = await AppDataSource.getRepository(Review)
-            .findOne({ where: { id: parseInt(id) } });
+            .findOne({ 
+                where: { id: parseInt(id) },
+                relations: ["content"]
+            });
 
         if (!review) {
             return res.status(404).json({ error: "Avaliação não encontrada" });
@@ -1361,6 +1382,24 @@ app.put("/api/admin/reviews/:id/approve", async (req, res) => {
 
         review.is_approved = true;
         await AppDataSource.getRepository(Review).save(review);
+
+        // Dispara o webhook de aprovação de avaliação
+        await WebhookService.createEvent('review.approved', {
+            review: {
+                id: review.id,
+                comment: review.comment,
+                rating: review.rating,
+                user_name: review.user_name,
+                user_email: review.user_email,
+                created_at: review.created_at,
+                is_approved: review.is_approved
+            },
+            content: {
+                id: review.content.id,
+                title: review.content.title,
+                slug: review.content.slug
+            }
+        });
 
         res.json({ message: "Avaliação aprovada com sucesso!" });
     } catch (error) {
@@ -1373,13 +1412,35 @@ app.delete("/api/admin/reviews/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const review = await AppDataSource.getRepository(Review)
-            .findOne({ where: { id: parseInt(id) } });
+            .findOne({ 
+                where: { id: parseInt(id) },
+                relations: ["content"]
+            });
 
         if (!review) {
             return res.status(404).json({ error: "Avaliação não encontrada" });
         }
 
+        // Captura os dados da avaliação antes de excluir
+        const reviewData = {
+            id: review.id,
+            comment: review.comment,
+            rating: review.rating,
+            user_name: review.user_name,
+            user_email: review.user_email,
+            created_at: review.created_at,
+            is_approved: review.is_approved,
+            content: {
+                id: review.content.id,
+                title: review.content.title,
+                slug: review.content.slug
+            }
+        };
+
         await AppDataSource.getRepository(Review).remove(review);
+
+        // Dispara o webhook de exclusão de avaliação
+        await WebhookService.createEvent('review.deleted', { review: reviewData });
 
         res.json({ message: "Avaliação removida com sucesso!" });
     } catch (error) {
