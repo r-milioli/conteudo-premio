@@ -12,6 +12,13 @@ echo "PostgreSQL está pronto!"
 echo "Criando configuração do TypeORM..."
 cat > /app/typeorm-config.mjs << EOF
 import { DataSource } from "typeorm";
+import { Review } from "./dist/database/entities/Review.js";
+import { Content } from "./dist/database/entities/Content.js";
+import { Administrator } from "./dist/database/entities/Administrator.js";
+import { SiteSettings } from "./dist/database/entities/SiteSettings.js";
+import { ContentAccess } from "./dist/database/entities/ContentAccess.js";
+import { WebhookEvent } from "./dist/database/entities/WebhookEvent.js";
+import { ContentAdditionalLink } from "./dist/database/entities/ContentAdditionalLink.js";
 
 const AppDataSource = new DataSource({
   type: "postgres",
@@ -23,7 +30,15 @@ const AppDataSource = new DataSource({
   synchronize: false,
   logging: ["query", "error", "schema", "warn", "info", "log"],
   logger: "advanced-console",
-  entities: ["./dist/database/entities/*.js"],
+  entities: [
+    Review, 
+    Content, 
+    Administrator, 
+    SiteSettings, 
+    ContentAccess, 
+    WebhookEvent,
+    ContentAdditionalLink
+  ],
   migrations: ["./dist/database/migrations/*.js"]
 });
 

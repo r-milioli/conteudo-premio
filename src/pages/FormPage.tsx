@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useMercadoPagoPix } from "@/hooks/useMercadoPagoPix";
 import { PixModal } from "@/components/PixModal";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ReviewSection } from "@/components/ReviewSection";
 
 // Form schema for initial form
 const initialFormSchema = z.object({
@@ -701,6 +702,11 @@ const FormPage = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Review Section - Full width */}
+        <div className="mt-12">
+          <ReviewSection contentSlug={slug} />
         </div>
       </div>
 

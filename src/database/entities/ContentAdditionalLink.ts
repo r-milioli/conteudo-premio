@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from "typeorm";
-import type { Content } from "./Content";
+import { Content } from "./Content";
 
 @Entity("content_additional_links")
 export class ContentAdditionalLink {

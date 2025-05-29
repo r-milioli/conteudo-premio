@@ -12,6 +12,7 @@ import { ContentAccess } from '../database/entities/ContentAccess.js';
 import fetch from 'node-fetch';
 import { WebhookProcessor } from '../jobs/WebhookProcessor.js';
 import { WebhookService } from '../services/WebhookService.js';
+import { Review } from '../database/entities/Review.js';
 
 // Load environment variables
 config();
@@ -1267,6 +1268,124 @@ app.get('/api/payments/pix/status/:id', async (req: Request, res: Response) => {
       details: error instanceof Error ? error.message : 'Erro desconhecido'
     });
   }
+});
+
+// Reviews routes
+app.post("/api/public/contents/:slug/reviews", async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const { comment, rating, user_email, user_name } = req.body;
+
+        const content = await AppDataSource.getRepository(Content)
+            .findOne({ where: { slug } });
+
+        if (!content) {
+            return res.status(404).json({ error: "Conteúdo não encontrado" });
+        }
+
+        const review = new Review();
+        review.comment = comment;
+        review.rating = rating;
+        review.user_email = user_email;
+        review.user_name = user_name;
+        review.content = content;
+        review.content_id = content.id;
+        review.is_approved = false;
+
+        await AppDataSource.getRepository(Review).save(review);
+
+        res.json({ message: "Avaliação enviada com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao salvar avaliação:", error);
+        res.status(500).json({ error: "Erro ao salvar avaliação" });
+    }
+});
+
+app.get("/api/public/contents/:slug/reviews", async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const content = await AppDataSource.getRepository(Content)
+            .findOne({ where: { slug } });
+
+        if (!content) {
+            return res.status(404).json({ error: "Conteúdo não encontrado" });
+        }
+
+        const reviews = await AppDataSource.getRepository(Review)
+            .find({
+                where: { 
+                    content_id: content.id,
+                    is_approved: true 
+                },
+                order: { created_at: "DESC" }
+            });
+
+        const averageRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+
+        res.json({
+            reviews,
+            averageRating: reviews.length > 0 ? averageRating : 0,
+            totalReviews: reviews.length
+        });
+    } catch (error) {
+        console.error("Erro ao buscar avaliações:", error);
+        res.status(500).json({ error: "Erro ao buscar avaliações" });
+    }
+});
+
+// Admin routes for reviews
+app.get("/api/admin/reviews", async (req, res) => {
+    try {
+        const reviews = await AppDataSource.getRepository(Review)
+            .find({
+                relations: ["content"],
+                order: { created_at: "DESC" }
+            });
+
+        res.json(reviews);
+    } catch (error) {
+        console.error("Erro ao buscar avaliações:", error);
+        res.status(500).json({ error: "Erro ao buscar avaliações" });
+    }
+});
+
+app.put("/api/admin/reviews/:id/approve", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const review = await AppDataSource.getRepository(Review)
+            .findOne({ where: { id: parseInt(id) } });
+
+        if (!review) {
+            return res.status(404).json({ error: "Avaliação não encontrada" });
+        }
+
+        review.is_approved = true;
+        await AppDataSource.getRepository(Review).save(review);
+
+        res.json({ message: "Avaliação aprovada com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao aprovar avaliação:", error);
+        res.status(500).json({ error: "Erro ao aprovar avaliação" });
+    }
+});
+
+app.delete("/api/admin/reviews/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const review = await AppDataSource.getRepository(Review)
+            .findOne({ where: { id: parseInt(id) } });
+
+        if (!review) {
+            return res.status(404).json({ error: "Avaliação não encontrada" });
+        }
+
+        await AppDataSource.getRepository(Review).remove(review);
+
+        res.json({ message: "Avaliação removida com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao remover avaliação:", error);
+        res.status(500).json({ error: "Erro ao remover avaliação" });
+    }
 });
 
 // Handle React routing, return all requests to React app

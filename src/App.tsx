@@ -27,6 +27,9 @@ import Dashboard from "./pages/admin/Dashboard";
 import ContentManagement from "./pages/admin/ContentManagement";
 import Reports from "./pages/admin/Reports";
 import SiteSettings from "./pages/admin/SiteSettings";
+import Reviews from "./pages/admin/Reviews";
+import Users from "./pages/admin/Users";
+import Settings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +61,9 @@ const App = () => (
               <Route path="conteudos" element={<ContentManagement />} />
               <Route path="relatorios" element={<Reports />} />
               <Route path="configuracoes" element={<SiteSettings />} />
+              <Route path="avaliacoes" element={<Reviews />} />
+              <Route path="usuarios" element={<Users />} />
+              <Route path="configuracoes" element={<Settings />} />
             </Route>
           </Route>
           

@@ -1,5 +1,12 @@
 import { DataSource } from "typeorm";
 import { join } from "path";
+import { Review } from "./entities/Review";
+import { Content } from "./entities/Content";
+import { Administrator } from "./entities/Administrator";
+import { SiteSettings } from "./entities/SiteSettings";
+import { ContentAccess } from "./entities/ContentAccess";
+import { WebhookEvent } from "./entities/WebhookEvent";
+import { ContentAdditionalLink } from "./entities/ContentAdditionalLink";
 
 export const AppDataSource = new DataSource({
     type: "postgres",
@@ -11,7 +18,15 @@ export const AppDataSource = new DataSource({
     synchronize: false,
     logging: ["query", "error", "schema", "warn", "info", "log"],
     logger: "advanced-console",
-    entities: ["./dist/database/entities/*.js"],
+    entities: [
+        Review, 
+        Content, 
+        Administrator, 
+        SiteSettings, 
+        ContentAccess, 
+        WebhookEvent,
+        ContentAdditionalLink
+    ],
     migrations: ["./dist/database/migrations/*.js"],
 });
 

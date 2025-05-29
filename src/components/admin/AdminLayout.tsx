@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LayoutDashboard, FileText, BarChart, Menu, LogOut, FileEdit, Settings } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart, Menu, LogOut, FileEdit, Settings, MessageSquare } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import DynamicHead from "@/components/DynamicHead";
 
@@ -39,6 +39,7 @@ const AdminLayout = () => {
     { icon: LayoutDashboard, title: "Dashboard", path: "/admin/dashboard" },
     { icon: FileEdit, title: "Conteúdos", path: "/admin/conteudos" },
     { icon: BarChart, title: "Relatórios", path: "/admin/relatorios" },
+    { icon: MessageSquare, title: "Avaliações", path: "/admin/avaliacoes" },
     { icon: Settings, title: "Configurações", path: "/admin/configuracoes" }
   ];
 
