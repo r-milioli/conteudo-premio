@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/tabs";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 // Schema para validação do formulário de novo conteúdo
 const newContentSchema = z.object({
@@ -117,15 +118,20 @@ const ContentManagement = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { settings } = useSiteSettings();
   const primaryColor = settings?.primaryColor || '#4361ee';
+  const itemsPerPage = 10;
 
   // Carregar conteúdos ao montar o componente
   useEffect(() => {
     const fetchContents = async () => {
       try {
+        setIsLoading(true);
         const token = localStorage.getItem('adminToken');
-        const response = await fetch('/api/contents', {
+        const response = await fetch(`/api/contents?page=${currentPage}&search=${searchTerm}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -136,7 +142,8 @@ const ContentManagement = () => {
         }
 
         const data = await response.json();
-        setContents(data);
+        setContents(data.contents);
+        setTotalPages(Math.ceil(data.total / itemsPerPage));
       } catch (error) {
         console.error('Erro ao carregar conteúdos:', error);
         toast({
@@ -149,8 +156,23 @@ const ContentManagement = () => {
       }
     };
 
-    fetchContents();
-  }, []);
+    // Debounce para a pesquisa
+    const timeoutId = setTimeout(() => {
+      fetchContents();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPage, searchTerm]);
+
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setCurrentPage(1); // Reset para a primeira página ao pesquisar
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
 
   // Form para novo conteúdo
   const form = useForm<z.infer<typeof newContentSchema>>({
@@ -406,6 +428,17 @@ const ContentManagement = () => {
         </Button>
       </div>
 
+      {/* Barra de pesquisa */}
+      <div className="max-w-md">
+        <Input
+          type="text"
+          placeholder="Pesquisar conteúdos..."
+          value={searchTerm}
+          onChange={handleSearch}
+          className="w-full"
+        />
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center h-32">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -416,83 +449,118 @@ const ContentManagement = () => {
           <p className="text-gray-500 text-sm">Clique em "Novo Conteúdo" para começar.</p>
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-1">
-          {contents.map((content) => (
-            <Card key={content.id} className="overflow-hidden">
-              <CardHeader className="p-4 sm:p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-2 w-full sm:w-auto">
-                    <CardTitle className="text-lg sm:text-xl break-words">{content.title}</CardTitle>
-                    <CardDescription className="text-sm break-words">{content.description}</CardDescription>
-                    <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-500 mt-2">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                        {formatDate(content.created_at)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                        {content.access_count} acessos
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                        {content.download_count} downloads
+        <>
+          <div className="grid gap-4 grid-cols-1">
+            {contents.map((content) => (
+              <Card key={content.id} className="overflow-hidden">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="space-y-2 w-full sm:w-auto">
+                      <CardTitle className="text-lg sm:text-xl break-words">{content.title}</CardTitle>
+                      <CardDescription className="text-sm break-words">{content.description}</CardDescription>
+                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-500 mt-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+                          {format(new Date(content.created_at), 'dd/MM/yyyy HH:mm')}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                          {content.access_count} acessos
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                          {content.download_count} downloads
+                        </div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 self-start">
+                      <Badge 
+                        variant={content.status === 'published' ? 'default' : 'secondary'}
+                        className="text-xs sm:text-sm whitespace-nowrap"
+                      >
+                        {content.status === 'published' ? 'Publicado' : 'Rascunho'}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel className="text-xs sm:text-sm">Ações</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleEdit(content.id)} className="text-xs sm:text-sm">
+                            <Edit className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(content.id)} className="text-xs sm:text-sm">
+                            <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            {content.status === 'published' ? 'Tornar Rascunho' : 'Publicar'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="text-xs sm:text-sm">Visualizar Páginas</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => handleViewContent(content.slug)} className="text-xs sm:text-sm">
+                            <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Página de Conteúdo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDonation(content.slug)} className="text-xs sm:text-sm">
+                            <Gift className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Página de Doação
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)} className="text-xs sm:text-sm">
+                            <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Página de Entrega
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(content.id)}
+                            className="text-red-600 text-xs sm:text-sm"
+                          >
+                            <Trash2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 self-start">
-                    <Badge 
-                      variant={content.status === 'published' ? 'default' : 'secondary'}
-                      className="text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      {content.status === 'published' ? 'Publicado' : 'Rascunho'}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Abrir menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel className="text-xs sm:text-sm">Ações</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleEdit(content.id)} className="text-xs sm:text-sm">
-                          <Edit className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(content.id)} className="text-xs sm:text-sm">
-                          <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          {content.status === 'published' ? 'Tornar Rascunho' : 'Publicar'}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs sm:text-sm">Visualizar Páginas</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => handleViewContent(content.slug)} className="text-xs sm:text-sm">
-                          <Eye className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Página de Conteúdo
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewDonation(content.slug)} className="text-xs sm:text-sm">
-                          <Gift className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Página de Doação
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleViewDelivery(content.slug)} className="text-xs sm:text-sm">
-                          <Download className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Página de Entrega
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(content.id)}
-                          className="text-red-600 text-xs sm:text-sm"
-                        >
-                          <Trash2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  onClick={() => handlePageChange(page)}
+                  style={currentPage === page ? { 
+                    backgroundColor: primaryColor,
+                    color: 'white'
+                  } : {}}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal de Novo Conteúdo */}

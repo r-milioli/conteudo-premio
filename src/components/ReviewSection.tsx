@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Star, StarHalf } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { cn } from "@/lib/utils";
 
 interface Review {
     id: number;
@@ -18,6 +20,8 @@ interface ReviewSectionProps {
 }
 
 export function ReviewSection({ contentSlug }: ReviewSectionProps) {
+    const { settings } = useSiteSettings();
+    const primaryColor = settings?.primaryColor || '#4361ee';
     const [reviews, setReviews] = useState<Review[]>([]);
     const [averageRating, setAverageRating] = useState(0);
     const [totalReviews, setTotalReviews] = useState(0);
@@ -188,7 +192,18 @@ export function ReviewSection({ contentSlug }: ReviewSectionProps) {
                         />
                     </div>
 
-                    <Button type="submit" disabled={submitting}>
+                    <Button 
+                        type="submit" 
+                        disabled={submitting}
+                        className={cn(
+                            "transition-colors",
+                            "hover:opacity-90"
+                        )}
+                        style={{ 
+                            backgroundColor: primaryColor,
+                            color: 'white'
+                        }}
+                    >
                         {submitting ? "Enviando..." : "Enviar avaliação"}
                     </Button>
                 </form>

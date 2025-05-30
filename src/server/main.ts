@@ -283,37 +283,61 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
 // Listar todos os conteúdos
 app.get('/api/contents', authenticateToken, async (req: Request, res: Response) => {
     try {
+        const page = parseInt(req.query.page as string) || 1;
+        const search = (req.query.search as string) || '';
+        const itemsPerPage = 10;
+        const offset = (page - 1) * itemsPerPage;
+
         const contentRepository = AppDataSource.getRepository(Content);
-        const contents = await contentRepository.find({
-            select: [
-                'id',
-                'title',
-                'description',
-                'slug',
-                'status',
-                'thumbnail_url',
-                'banner_image_url',
-                'capture_page_title',
-                'capture_page_description',
-                'capture_page_video_url',
-                'capture_page_html',
-                'delivery_page_title',
-                'delivery_page_description',
-                'delivery_page_video_url',
-                'delivery_page_html',
-                'download_link',
-                'is_active',
-                'access_count',
-                'download_count',
-                'created_at',
-                'updated_at'
-            ],
-            order: {
-                created_at: 'DESC'
-            }
-        });
+
+        // Consulta para contar o total de registros
+        const countQuery = await contentRepository
+            .createQueryBuilder('content')
+            .where(search ? 'content.title LIKE :search OR content.description LIKE :search' : '1=1', {
+                search: `%${search}%`
+            })
+            .getCount();
+
+        // Consulta para buscar os conteúdos paginados
+        const contents = await contentRepository
+            .createQueryBuilder('content')
+            .where(search ? 'content.title LIKE :search OR content.description LIKE :search' : '1=1', {
+                search: `%${search}%`
+            })
+            .select([
+                'content.id',
+                'content.title',
+                'content.description',
+                'content.slug',
+                'content.status',
+                'content.thumbnail_url',
+                'content.banner_image_url',
+                'content.capture_page_title',
+                'content.capture_page_description',
+                'content.capture_page_video_url',
+                'content.capture_page_html',
+                'content.delivery_page_title',
+                'content.delivery_page_description',
+                'content.delivery_page_video_url',
+                'content.delivery_page_html',
+                'content.download_link',
+                'content.is_active',
+                'content.access_count',
+                'content.download_count',
+                'content.created_at',
+                'content.updated_at'
+            ])
+            .orderBy('content.created_at', 'DESC')
+            .skip(offset)
+            .take(itemsPerPage)
+            .getMany();
         
-        res.json(contents);
+        res.json({
+            contents,
+            total: countQuery,
+            currentPage: page,
+            totalPages: Math.ceil(countQuery / itemsPerPage)
+        });
     } catch (error) {
         console.error('Erro ao buscar conteúdos:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -863,31 +887,68 @@ app.post('/api/webhooks/mercadopago', async (req: Request, res: Response) => {
 // Listar conteúdos públicos
 app.get('/api/public/contents', async (req: Request, res: Response) => {
     try {
-        const contentRepository = AppDataSource.getRepository(Content);
-        const contents = await contentRepository.find({
-            where: { 
+        const page = parseInt(req.query.page as string) || 1;
+        const search = (req.query.search as string) || '';
+        const itemsPerPage = 10;
+        const offset = (page - 1) * itemsPerPage;
+
+        // Consulta para contar o total de registros
+        const countQuery = await AppDataSource.getRepository(Content)
+            .createQueryBuilder('content')
+            .where('content.status = :status AND content.is_active = :is_active', {
                 status: 'published',
-                is_active: true 
-            },
-            select: [
-                'id',
-                'title',
-                'description',
-                'slug',
-                'thumbnail_url',
-                'banner_image_url',
-                'access_count',
-                'download_count'
-            ],
-            order: {
-                created_at: 'DESC'
-            }
+                is_active: true
+            })
+            .andWhere('(content.title LIKE :search OR content.description LIKE :search)', {
+                search: `%${search}%`
+            })
+            .getCount();
+
+        // Consulta para buscar os conteúdos paginados
+        const contents = await AppDataSource.getRepository(Content)
+            .createQueryBuilder('content')
+            .where('content.status = :status AND content.is_active = :is_active', {
+                status: 'published',
+                is_active: true
+            })
+            .andWhere('(content.title LIKE :search OR content.description LIKE :search)', {
+                search: `%${search}%`
+            })
+            .select([
+                'content.id',
+                'content.title',
+                'content.description',
+                'content.slug',
+                'content.thumbnail_url',
+                'content.banner_image_url',
+                'content.access_count',
+                'content.download_count'
+            ])
+            .orderBy('content.created_at', 'DESC')
+            .skip(offset)
+            .take(itemsPerPage)
+            .getMany();
+
+        // Formatar a resposta
+        const formattedContents = contents.map(content => ({
+            id: content.id,
+            title: content.title,
+            description: content.description,
+            slug: content.slug,
+            thumbnail_url: content.thumbnail_url,
+            banner_image_url: content.banner_image_url,
+            access_count: content.access_count,
+            download_count: content.download_count,
+        }));
+
+        res.json({
+            contents: formattedContents,
+            total: countQuery,
+            currentPage: page,
+            totalPages: Math.ceil(countQuery / itemsPerPage),
         });
-        
-        console.log('Conteúdos encontrados:', contents);
-        res.json(contents);
     } catch (error) {
-        console.error('Erro ao buscar conteúdos:', error);
+        console.error('Erro ao listar conteúdos:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
@@ -1354,13 +1415,40 @@ app.get("/api/public/contents/:slug/reviews", async (req, res) => {
 // Admin routes for reviews
 app.get("/api/admin/reviews", async (req, res) => {
     try {
-        const reviews = await AppDataSource.getRepository(Review)
-            .find({
-                relations: ["content"],
-                order: { created_at: "DESC" }
-            });
+        const page = parseInt(req.query.page as string) || 1;
+        const search = (req.query.search as string) || '';
+        const itemsPerPage = 10;
+        const offset = (page - 1) * itemsPerPage;
 
-        res.json(reviews);
+        const reviewRepository = AppDataSource.getRepository(Review);
+
+        // Consulta para contar o total de registros
+        const countQuery = await reviewRepository
+            .createQueryBuilder('review')
+            .leftJoin('review.content', 'content')
+            .where(search ? 'review.user_name LIKE :search OR review.user_email LIKE :search OR review.comment LIKE :search OR content.title LIKE :search' : '1=1', {
+                search: `%${search}%`
+            })
+            .getCount();
+
+        // Consulta para buscar as avaliações paginadas
+        const reviews = await reviewRepository
+            .createQueryBuilder('review')
+            .leftJoinAndSelect('review.content', 'content')
+            .where(search ? 'review.user_name LIKE :search OR review.user_email LIKE :search OR review.comment LIKE :search OR content.title LIKE :search' : '1=1', {
+                search: `%${search}%`
+            })
+            .orderBy('review.created_at', 'DESC')
+            .skip(offset)
+            .take(itemsPerPage)
+            .getMany();
+
+        res.json({
+            reviews,
+            total: countQuery,
+            currentPage: page,
+            totalPages: Math.ceil(countQuery / itemsPerPage)
+        });
     } catch (error) {
         console.error("Erro ao buscar avaliações:", error);
         res.status(500).json({ error: "Erro ao buscar avaliações" });

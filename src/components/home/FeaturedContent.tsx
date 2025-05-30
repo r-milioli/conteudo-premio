@@ -10,8 +10,8 @@ interface Content {
   title: string;
   description: string;
   slug: string;
-  thumbnail_url: string;
-  banner_image_url: string;
+  thumbnail_url: string | null;
+  banner_image_url: string | null;
 }
 
 export default function FeaturedContent() {
@@ -29,7 +29,8 @@ export default function FeaturedContent() {
         }
         const data = await response.json();
         // Embaralha os conteúdos e pega 3 aleatórios
-        const shuffled = data.sort(() => 0.5 - Math.random());
+        const allContents = data.contents || [];
+        const shuffled = [...allContents].sort(() => 0.5 - Math.random());
         const selected = shuffled.slice(0, 3);
         setContents(selected);
       } catch (error) {
@@ -84,7 +85,7 @@ export default function FeaturedContent() {
                   <Card className="overflow-hidden animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                     <div className="aspect-video w-full overflow-hidden">
                       <img 
-                        src={content.thumbnail_url || content.banner_image_url} 
+                        src={content.thumbnail_url || content.banner_image_url || '/placeholder.svg'} 
                         alt={content.title} 
                         className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                       />
