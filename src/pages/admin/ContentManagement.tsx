@@ -356,7 +356,7 @@ const ContentManagement = () => {
   };
 
   const handleViewDonation = (slug: string) => {
-    window.open(`/form/${slug}`, '_blank');
+    window.open(`/formulario/${slug}`, '_blank');
   };
 
   const handleViewDelivery = (slug: string) => {

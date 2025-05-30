@@ -38,7 +38,7 @@ const ContentPage = () => {
   }, [slug]);
 
   const handleAccessContent = () => {
-    navigate(`/form/${slug}`);
+    navigate(`/formulario/${slug}`);
   };
 
   if (loading) {

@@ -45,7 +45,7 @@ const DeliveryPage = () => {
     
     // Se não houver dados de estado, redireciona para o formulário
     if (!location.state) {
-      navigate(`/form/${slug}`);
+      navigate(`/formulario/${slug}`);
       return;
     }
   }, [slug, location.state, navigate]);
