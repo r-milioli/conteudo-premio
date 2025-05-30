@@ -37,10 +37,10 @@ const AdminLayout = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, title: "Dashboard", path: "/admin/dashboard" },
-    { icon: FileEdit, title: "Conteúdos", path: "/admin/conteudos" },
-    { icon: BarChart, title: "Relatórios", path: "/admin/relatorios" },
-    { icon: MessageSquare, title: "Avaliações", path: "/admin/avaliacoes" },
-    { icon: Settings, title: "Configurações", path: "/admin/configuracoes" }
+    { icon: FileEdit, title: "Conteúdos", path: "/admin/contents" },
+    { icon: BarChart, title: "Relatórios", path: "/admin/reports" },
+    { icon: MessageSquare, title: "Avaliações", path: "/admin/reviews" },
+    { icon: Settings, title: "Configurações", path: "/admin/settings" }
   ];
 
   return (

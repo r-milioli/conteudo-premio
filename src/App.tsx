@@ -66,6 +66,8 @@ const App = () => (
             </Route>
           </Route>
         </Routes>
+        <Toaster />
+        <Sonner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

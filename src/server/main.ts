@@ -1224,7 +1224,36 @@ app.post('/api/public/contact', async (req: Request, res: Response) => {
             });
         }
 
-        // Dispara o evento de webhook para a mensagem de contato
+        // Busca o email de contato das configurações
+        const settingsRepository = AppDataSource.getRepository(SiteSettings);
+        const settings = await settingsRepository.findOne({ where: { id: 1 } });
+        
+        if (!settings?.contactEmail) {
+            console.error('Email de contato não configurado no sistema');
+        } else {
+            // Envia email de notificação usando o serviço SMTP configurado
+            try {
+                const emailHtml = `
+                    <h2>Nova mensagem de contato recebida</h2>
+                    <p><strong>Nome:</strong> ${name}</p>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Assunto:</strong> ${subject}</p>
+                    <p><strong>Mensagem:</strong></p>
+                    <p>${message}</p>
+                `;
+
+                await emailService.sendEmail({
+                    to: settings.contactEmail,
+                    subject: `Nova mensagem de contato: ${subject}`,
+                    html: emailHtml
+                });
+            } catch (emailError) {
+                console.error('Erro ao enviar email de notificação:', emailError);
+                // Não retornamos erro para o usuário pois o webhook ainda funcionou
+            }
+        }
+
+        // Mantém o comportamento existente do webhook
         await WebhookService.createEvent('contact.message.created', {
             name,
             email,
