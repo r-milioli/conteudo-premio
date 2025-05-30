@@ -1574,6 +1574,53 @@ app.post('/api/admin/forgot-password', async (req: Request, res: Response) => {
     }
 });
 
+// Endpoint para redefinir a senha
+app.post('/api/admin/reset-password', async (req: Request, res: Response) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+        }
+
+        // Verifica o token
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as {
+                id: number;
+                email: string;
+                purpose: string;
+            };
+        } catch (error) {
+            return res.status(400).json({ error: 'Token inválido ou expirado' });
+        }
+
+        // Verifica se é um token de reset de senha
+        if (decodedToken.purpose !== 'password-reset') {
+            return res.status(400).json({ error: 'Token inválido' });
+        }
+
+        const adminRepository = AppDataSource.getRepository(Administrator);
+        const admin = await adminRepository.findOne({ where: { id: decodedToken.id } });
+
+        if (!admin) {
+            return res.status(404).json({ error: 'Administrador não encontrado' });
+        }
+
+        // Hash da nova senha
+        const hashedPassword = await bcrypt.hash(password, 10);
+        admin.password_hash = hashedPassword;
+
+        // Salva a nova senha
+        await adminRepository.save(admin);
+
+        res.json({ message: 'Senha alterada com sucesso' });
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+});
+
 // Handle React routing, return all requests to React app
 app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));

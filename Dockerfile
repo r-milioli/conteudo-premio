@@ -69,7 +69,9 @@ ENV PORT=8080 \
     SMTP_PASSWORD="" \
     NEXT_PUBLIC_SMTP_FROM="" \
     SMTP_AUTH_DISABLED="false" \
-    SMTP_SECURE="false"
+    SMTP_SECURE="false" \
+    # URL da aplicação
+    NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 # Expõe a porta da aplicação
 EXPOSE 8080

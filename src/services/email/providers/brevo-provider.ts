@@ -13,6 +13,12 @@ export class BrevoEmailProvider implements EmailProvider {
         user: process.env.SMTP_USERNAME,
         pass: process.env.SMTP_PASSWORD,
       },
+      headers: {
+        'X-Mailin-Tag': 'password-reset',
+        'X-Mailin-Track-Click': '0',
+        'X-Mailin-Track-Open': '0',
+        'X-Mailin-Track': 'false'
+      }
     });
   }
 
@@ -23,6 +29,11 @@ export class BrevoEmailProvider implements EmailProvider {
         to: options.to,
         subject: options.subject,
         html: options.html,
+        headers: {
+          'X-Mailin-Track-Click': '0',
+          'X-Mailin-Track-Open': '0',
+          'X-Mailin-Track': 'false'
+        }
       });
     } catch (error) {
       console.error('Erro ao enviar email:', error);

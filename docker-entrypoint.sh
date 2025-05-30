@@ -1,15 +1,16 @@
 #!/bin/sh
 set -e
 
-# Valida variáveis de ambiente do SMTP
-echo "Validando configurações do SMTP..."
-if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USERNAME" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$NEXT_PUBLIC_SMTP_FROM" ]; then
-  echo "Erro: Variáveis de ambiente do SMTP não configuradas corretamente!"
+# Valida variáveis de ambiente do SMTP e URL da aplicação
+echo "Validando configurações do SMTP e URL da aplicação..."
+if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USERNAME" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$NEXT_PUBLIC_SMTP_FROM" ] || [ -z "$NEXT_PUBLIC_APP_URL" ]; then
+  echo "Erro: Variáveis de ambiente não configuradas corretamente!"
   echo "Por favor, configure as seguintes variáveis:"
   echo "- SMTP_HOST"
   echo "- SMTP_USERNAME"
   echo "- SMTP_PASSWORD"
   echo "- NEXT_PUBLIC_SMTP_FROM"
+  echo "- NEXT_PUBLIC_APP_URL"
   exit 1
 fi
 

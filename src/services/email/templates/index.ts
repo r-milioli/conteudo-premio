@@ -22,9 +22,14 @@ export class EmailTemplates {
               display: inline-block;
               padding: 10px 20px;
               background-color: #4361ee;
-              color: white;
+              color: white !important;
               text-decoration: none;
               border-radius: 5px;
+              margin: 20px 0;
+            }
+            .link-text {
+              word-break: break-all;
+              color: #4361ee;
               margin: 20px 0;
             }
             .footer {
@@ -53,10 +58,14 @@ export class EmailTemplates {
     const content = `
       <h1>Recuperação de Senha</h1>
       <p>Você solicitou a recuperação de senha da sua conta.</p>
-      <p>Clique no botão abaixo para criar uma nova senha:</p>
+      <p>Para criar uma nova senha, você pode:</p>
+      <p>1. Clicar no botão abaixo:</p>
       <a href="${resetLink}" class="button">Redefinir Senha</a>
+      <p>2. Ou copiar e colar o seguinte link no seu navegador:</p>
+      <p class="link-text">${resetLink}</p>
       <p>Se você não solicitou esta recuperação, ignore este email.</p>
       <p>Este link expira em 1 hora.</p>
+      <p><strong>Importante:</strong> Este link só pode ser usado uma vez.</p>
     `;
     return this.getBaseTemplate(content);
   }
