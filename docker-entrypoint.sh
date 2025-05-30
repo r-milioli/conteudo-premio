@@ -1,6 +1,18 @@
 #!/bin/sh
 set -e
 
+# Valida variáveis de ambiente do SMTP
+echo "Validando configurações do SMTP..."
+if [ -z "$SMTP_HOST" ] || [ -z "$SMTP_USERNAME" ] || [ -z "$SMTP_PASSWORD" ] || [ -z "$NEXT_PUBLIC_SMTP_FROM" ]; then
+  echo "Erro: Variáveis de ambiente do SMTP não configuradas corretamente!"
+  echo "Por favor, configure as seguintes variáveis:"
+  echo "- SMTP_HOST"
+  echo "- SMTP_USERNAME"
+  echo "- SMTP_PASSWORD"
+  echo "- NEXT_PUBLIC_SMTP_FROM"
+  exit 1
+fi
+
 # Aguarda o PostgreSQL estar pronto
 echo "Aguardando PostgreSQL ficar pronto..."
 while ! nc -z $DB_HOST $DB_PORT; do
@@ -58,6 +70,10 @@ else
     echo "Erro ao executar migrações!"
     exit 1
 fi
+
+# Verifica se os diretórios do serviço de email existem
+echo "Verificando diretórios do serviço de email..."
+mkdir -p /app/src/services/email/providers /app/src/services/email/templates
 
 # Inicia a aplicação
 echo "Iniciando aplicação..."

@@ -1,55 +1,53 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
-const AdminLogin = () => {
+const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess(false);
 
-    if (!email || !password) {
-      setError("Por favor, preencha todos os campos");
+    if (!email) {
+      setError("Por favor, insira seu e-mail");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao fazer login');
+        throw new Error(data.error || 'Erro ao processar solicitação');
       }
 
-      localStorage.setItem("adminToken", data.token);
-      
+      setSuccess(true);
       toast({
-        title: "Bem-vindo!",
-        description: "Login realizado com sucesso.",
+        title: "Solicitação enviada!",
+        description: "Se este email estiver cadastrado, você receberá as instruções de recuperação.",
       });
-
-      navigate('/admin/dashboard');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'E-mail ou senha incorretos');
+      setError(error instanceof Error ? error.message : 'Erro ao processar solicitação');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -59,14 +57,14 @@ const AdminLogin = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-2">Conteúdo Premium</h1>
-          <h2 className="text-xl font-medium text-gray-600">Acesso Administrativo</h2>
+          <h2 className="text-xl font-medium text-gray-600">Recuperação de Senha</h2>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle>Esqueceu sua senha?</CardTitle>
             <CardDescription>
-              Entre com suas credenciais para acessar o painel administrativo
+              Digite seu e-mail para receber as instruções de recuperação
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -79,26 +77,8 @@ const AdminLogin = () => {
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading || success}
                 />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <div className="text-right">
-                  <Link 
-                    to="/admin/forgot-password"
-                    className="text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    Esqueceu sua senha?
-                  </Link>
-                </div>
               </div>
 
               {error && (
@@ -107,18 +87,33 @@ const AdminLogin = () => {
                 </div>
               )}
 
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-600 p-3 rounded-md text-sm">
+                  Se este email estiver cadastrado, você receberá as instruções de recuperação em breve.
+                </div>
+              )}
+
               <Button
                 type="submit" 
                 className="w-full gradient-bg"
-                disabled={isLoading}
+                disabled={isLoading || success}
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
                     <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                    Entrando...
+                    Enviando...
                   </span>
-                ) : "Entrar"}
+                ) : "Enviar instruções"}
               </Button>
+
+              <div className="text-center mt-4">
+                <Link 
+                  to="/admin/login"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Voltar para o login
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -127,4 +122,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default ForgotPassword; 

@@ -13,6 +13,8 @@ import fetch from 'node-fetch';
 import { WebhookProcessor } from '../jobs/WebhookProcessor.js';
 import { WebhookService } from '../services/WebhookService.js';
 import { Review } from '../database/entities/Review.js';
+import { EmailService } from '../services/email/email-service.js';
+import { BrevoEmailProvider } from '../services/email/providers/brevo-provider.js';
 
 // Load environment variables
 config();
@@ -1534,6 +1536,41 @@ app.delete("/api/admin/reviews/:id", async (req, res) => {
     } catch (error) {
         console.error("Erro ao remover avaliação:", error);
         res.status(500).json({ error: "Erro ao remover avaliação" });
+    }
+});
+
+// Endpoint para recuperação de senha
+app.post('/api/admin/forgot-password', async (req: Request, res: Response) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: 'E-mail é obrigatório' });
+        }
+
+        const adminRepository = AppDataSource.getRepository(Administrator);
+        const admin = await adminRepository.findOne({ where: { email } });
+
+        // Por segurança, não informamos se o email existe ou não
+        if (!admin) {
+            return res.json({ message: 'Se este email estiver cadastrado, você receberá as instruções de recuperação.' });
+        }
+
+        // Gera token de reset
+        const resetToken = jwt.sign(
+            { id: admin.id, email: admin.email, purpose: 'password-reset' },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '1h' }
+        );
+
+        // Envia email com instruções
+        const emailService = new EmailService(new BrevoEmailProvider());
+        await emailService.sendPasswordReset(email, resetToken);
+
+        res.json({ message: 'Se este email estiver cadastrado, você receberá as instruções de recuperação.' });
+    } catch (error) {
+        console.error('Erro ao processar recuperação de senha:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 
