@@ -14,13 +14,17 @@ import { WebhookProcessor } from '../jobs/WebhookProcessor.js';
 import { WebhookService } from '../services/WebhookService.js';
 import { Review } from '../database/entities/Review.js';
 import { EmailService } from '../services/email/email-service.js';
-import { BrevoEmailProvider } from '../services/email/providers/brevo-provider.js';
+import { SmtpEmailProvider } from '../services/email/providers/smtp-provider.js';
 
 // Load environment variables
 config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Initialize email service
+const emailProvider = new SmtpEmailProvider();
+const emailService = new EmailService(emailProvider);
 
 // Initialize TypeORM connection
 AppDataSource.initialize()
@@ -1563,8 +1567,7 @@ app.post('/api/admin/forgot-password', async (req: Request, res: Response) => {
             { expiresIn: '1h' }
         );
 
-        // Envia email com instruções
-        const emailService = new EmailService(new BrevoEmailProvider());
+        // Envia email com instruções usando o serviço inicializado
         await emailService.sendPasswordReset(email, resetToken);
 
         res.json({ message: 'Se este email estiver cadastrado, você receberá as instruções de recuperação.' });
