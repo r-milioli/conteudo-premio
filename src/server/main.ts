@@ -197,7 +197,7 @@ app.put('/api/settings', authenticateToken, async (req: Request, res: Response) 
         }
 
         // Validação de URLs
-        const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+        const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w@\s.-]*)*(\?[^#\s]*)?(\#[^\s]*)?$/;
 
         // Validação de URLs obrigatórias
         const requiredUrlFields = ['logoUrl', 'faviconUrl'];

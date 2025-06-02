@@ -1,10 +1,17 @@
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import DOMPurify from 'dompurify';
 
 export default function Footer() {
   const { settings, loading } = useSiteSettings();
   const hoverColor = settings?.primaryColor || '#4361ee';
   const currentYear = new Date().getFullYear();
+
+  const getSafeHtml = (html: string) => {
+    return { __html: DOMPurify.sanitize(html) };
+  };
+
+  const defaultFooterText = `© ${currentYear} Conteúdo Premium. Todos os direitos reservados.`;
 
   return (
     <footer className="bg-gray-50 border-t py-12">
@@ -79,9 +86,14 @@ export default function Footer() {
         </div>
         
         <div className="mt-8 border-t pt-8">
-          <p className="text-sm text-gray-500 text-center">
-            {loading ? "Carregando..." : settings?.footerText || `© ${currentYear} Conteúdo Premium. Todos os direitos reservados.`}
-          </p>
+          {loading ? (
+            <p className="text-sm text-gray-500 text-center">Carregando...</p>
+          ) : (
+            <div 
+              className="text-sm text-gray-500 text-center"
+              dangerouslySetInnerHTML={getSafeHtml(settings?.footerText || defaultFooterText)}
+            />
+          )}
         </div>
       </div>
     </footer>

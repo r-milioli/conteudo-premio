@@ -1,12 +1,12 @@
 export class EmailTemplates {
-  static getBaseTemplate(content: string) {
+  static getBaseTemplate(content: string, siteName: string) {
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Conteúdo Premium</title>
+          <title>${siteName}</title>
           <style>
             body {
               font-family: Arial, sans-serif;
@@ -46,7 +46,7 @@ export class EmailTemplates {
             ${content}
             <div class="footer">
               <p>Este é um email automático, não responda.</p>
-              <p>Conteúdo Premium - Todos os direitos reservados</p>
+              <p>${siteName} - Todos os direitos reservados</p>
             </div>
           </div>
         </body>
@@ -54,7 +54,7 @@ export class EmailTemplates {
     `;
   }
 
-  static passwordReset(resetLink: string): string {
+  static passwordReset(resetLink: string, siteName: string): string {
     const content = `
       <h1>Recuperação de Senha</h1>
       <p>Você solicitou a recuperação de senha da sua conta.</p>
@@ -67,17 +67,17 @@ export class EmailTemplates {
       <p>Este link expira em 1 hora.</p>
       <p><strong>Importante:</strong> Este link só pode ser usado uma vez.</p>
     `;
-    return this.getBaseTemplate(content);
+    return this.getBaseTemplate(content, siteName);
   }
 
-  static welcome(name: string): string {
+  static welcome(name: string, siteName: string): string {
     const content = `
-      <h1>Bem-vindo(a) ao Conteúdo Premium!</h1>
+      <h1>Bem-vindo(a) ao ${siteName}!</h1>
       <p>Olá ${name},</p>
       <p>Estamos muito felizes em ter você conosco!</p>
       <p>A partir de agora você terá acesso a conteúdos exclusivos e de alta qualidade.</p>
       <p>Se precisar de ajuda ou tiver alguma dúvida, entre em contato conosco.</p>
     `;
-    return this.getBaseTemplate(content);
+    return this.getBaseTemplate(content, siteName);
   }
 } 

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -12,6 +13,9 @@ const ForgotPassword = () => {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Usa o hook do favicon
+  useDynamicFavicon();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

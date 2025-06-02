@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -15,6 +16,9 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const token = searchParams.get("token");
+
+  // Usa o hook do favicon
+  useDynamicFavicon();
 
   useEffect(() => {
     if (!token) {
