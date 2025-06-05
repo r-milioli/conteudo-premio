@@ -15,6 +15,8 @@ import { WebhookService } from '../services/WebhookService.js';
 import { Review } from '../database/entities/Review.js';
 import { EmailService } from '../services/email/email-service.js';
 import { SmtpEmailProvider } from '../services/email/providers/smtp-provider.js';
+import slugify from 'slugify';
+import { Not } from "typeorm";
 
 // Load environment variables
 config();
@@ -350,6 +352,36 @@ app.get('/api/contents', authenticateToken, async (req: Request, res: Response) 
     }
 });
 
+// Função auxiliar para gerar slug único
+async function generateUniqueSlug(baseSlug: string, contentRepository: any, currentId?: number): Promise<string> {
+    let slug = slugify(baseSlug, {
+        lower: true,
+        strict: true,
+        trim: true,
+        locale: 'pt'
+    });
+    
+    let counter = 0;
+    let uniqueSlug = slug;
+    
+    while (true) {
+        // Verifica se existe outro conteúdo com o mesmo slug
+        const existingContent = await contentRepository.findOne({ 
+            where: { 
+                slug: uniqueSlug,
+                ...(currentId ? { id: Not(currentId) } : {})
+            } 
+        });
+        
+        if (!existingContent) {
+            return uniqueSlug;
+        }
+        
+        counter++;
+        uniqueSlug = `${slug}-${counter}`;
+    }
+}
+
 // Criar novo conteúdo
 app.post('/api/contents', authenticateToken, async (req: Request, res: Response) => {
     try {
@@ -371,11 +403,8 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
 
         const contentRepository = AppDataSource.getRepository(Content);
         
-        // Gera o slug a partir do título
-        const slug = title.toLowerCase()
-            .replace(/[^\w\s-]/g, '') // Remove caracteres especiais
-            .replace(/\s+/g, '-') // Substitui espaços por hífens
-            .replace(/-+/g, '-'); // Remove hífens duplicados
+        // Gera o slug único a partir do título
+        const slug = await generateUniqueSlug(title, contentRepository);
 
         const content = contentRepository.create({
             title,
@@ -397,7 +426,6 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
 
         await contentRepository.save(content);
         
-        // Corrigindo o nome do evento de content.created para content_created
         await WebhookService.createEvent('content_created', {
             content_id: content.id,
             title: content.title,
@@ -429,7 +457,8 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             deliveryPageDescription,
             deliveryPageVideoUrl,
             deliveryPageHtml,
-            downloadLink
+            downloadLink,
+            slug: customSlug // Novo parâmetro opcional para slug customizado
         } = req.body;
 
         const contentRepository = AppDataSource.getRepository(Content);
@@ -439,11 +468,22 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             return res.status(404).json({ error: 'Conteúdo não encontrado' });
         }
 
+        // Se o título mudou e não foi fornecido um slug customizado, gera um novo
+        let newSlug = content.slug;
+        if (customSlug) {
+            // Se foi fornecido um slug customizado, valida e usa ele
+            newSlug = await generateUniqueSlug(customSlug, contentRepository, content.id);
+        } else if (title !== content.title) {
+            // Se o título mudou e não foi fornecido slug, gera um novo baseado no título
+            newSlug = await generateUniqueSlug(title, contentRepository, content.id);
+        }
+
         // Mapeia corretamente os campos de camelCase para snake_case
         const updatedContent = {
             ...content,
             title,
             description,
+            slug: newSlug,
             thumbnail_url: thumbnailUrl,
             banner_image_url: bannerImageUrl,
             capture_page_title: capturePageTitle,
@@ -460,11 +500,10 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
 
         await contentRepository.save(updatedContent);
         
-        // Corrigindo o nome do evento de content.updated para content_updated
         await WebhookService.createEvent('content_updated', {
             content_id: content.id,
             title: content.title,
-            slug: content.slug,
+            slug: newSlug,
             status: content.status,
         });
         

@@ -61,6 +61,7 @@ import { format } from "date-fns";
 const newContentSchema = z.object({
   title: z.string().min(3, "O título deve ter pelo menos 3 caracteres"),
   description: z.string().min(10, "A descrição deve ter pelo menos 10 caracteres"),
+  slug: z.string().optional(),
   thumbnailUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   bannerImageUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   capturePageTitle: z.string().min(3, "O título da página de captura deve ter pelo menos 3 caracteres"),
@@ -200,6 +201,7 @@ const ContentManagement = () => {
     defaultValues: {
       title: "",
       description: "",
+      slug: "",
       thumbnailUrl: "",
       bannerImageUrl: "",
       capturePageTitle: "",
@@ -260,6 +262,7 @@ const ContentManagement = () => {
       editForm.reset({
         title: content.title || '',
         description: content.description || '',
+        slug: content.slug || '',
         thumbnailUrl: content.thumbnail_url || '',
         bannerImageUrl: content.banner_image_url || '',
         capturePageTitle: content.capture_page_title || '',
@@ -862,6 +865,23 @@ const ContentManagement = () => {
                           <FormControl>
                             <Input placeholder="Ex: Guia Completo de Marketing Digital" {...field} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="slug"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Slug (URL)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: guia-completo-marketing-digital" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Deixe em branco para gerar automaticamente a partir do título
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
