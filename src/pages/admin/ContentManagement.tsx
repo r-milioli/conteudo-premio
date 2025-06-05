@@ -465,7 +465,7 @@ const ContentManagement = () => {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="space-y-2 w-full sm:w-auto">
                       <CardTitle className="text-lg sm:text-xl break-words">{content.title}</CardTitle>
-                      <CardDescription className="text-sm break-words">{content.description}</CardDescription>
+                      <CardDescription className="text-sm break-words line-clamp-2">{content.description}</CardDescription>
                       <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-500 mt-2">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
