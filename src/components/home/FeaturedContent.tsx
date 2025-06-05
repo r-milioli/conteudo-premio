@@ -92,7 +92,7 @@ export default function FeaturedContent() {
                     </div>
                     <CardHeader>
                       <CardTitle>{content.title}</CardTitle>
-                      <CardDescription>{content.description}</CardDescription>
+                      <CardDescription className="line-clamp-5">{content.description}</CardDescription>
                     </CardHeader>
                     <CardFooter>
                       <Button 

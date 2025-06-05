@@ -117,7 +117,7 @@ const ContentsPage = () => {
                   </div>
                   <CardHeader>
                     <CardTitle className="text-lg">{content.title}</CardTitle>
-                    <CardDescription>{content.description}</CardDescription>
+                    <CardDescription className="line-clamp-5">{content.description}</CardDescription>
                     <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
                       <div className="flex items-center gap-1">
                         <User className="h-4 w-4" />
