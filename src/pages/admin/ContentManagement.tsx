@@ -66,6 +66,7 @@ const newContentSchema = z.object({
   bannerImageUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   capturePageTitle: z.string().min(3, "O título da página de captura deve ter pelo menos 3 caracteres"),
   capturePageDescription: z.string().min(10, "A descrição da página de captura deve ter pelo menos 10 caracteres"),
+  capturePageBannerUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   capturePageVideoUrl: z.string().url("URL inválida").optional().or(z.literal("")),
   capturePageHtml: z.string().optional(),
   deliveryPageTitle: z.string().min(3, "O título da página de entrega deve ter pelo menos 3 caracteres"),
@@ -85,6 +86,7 @@ interface Content {
   banner_image_url: string | null;
   capture_page_title: string | null;
   capture_page_description: string | null;
+  capture_page_banner_url: string | null;
   capture_page_video_url: string | null;
   capture_page_html: string | null;
   delivery_page_title: string | null;
@@ -185,6 +187,7 @@ const ContentManagement = () => {
       bannerImageUrl: "",
       capturePageTitle: "",
       capturePageDescription: "",
+      capturePageBannerUrl: "",
       capturePageVideoUrl: "",
       capturePageHtml: "",
       deliveryPageTitle: "",
@@ -206,6 +209,7 @@ const ContentManagement = () => {
       bannerImageUrl: "",
       capturePageTitle: "",
       capturePageDescription: "",
+      capturePageBannerUrl: "",
       capturePageVideoUrl: "",
       capturePageHtml: "",
       deliveryPageTitle: "",
@@ -267,6 +271,7 @@ const ContentManagement = () => {
         bannerImageUrl: content.banner_image_url || '',
         capturePageTitle: content.capture_page_title || '',
         capturePageDescription: content.capture_page_description || '',
+        capturePageBannerUrl: content.capture_page_banner_url || '',
         capturePageVideoUrl: content.capture_page_video_url || '',
         capturePageHtml: content.capture_page_html || '',
         deliveryPageTitle: content.delivery_page_title || '',
@@ -691,6 +696,21 @@ const ContentManagement = () => {
 
                     <FormField
                       control={form.control}
+                      name="capturePageBannerUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Banner da Página de Captura</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/banner-captura.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem principal exibida na página de captura</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="capturePageVideoUrl"
                       render={({ field }) => (
                         <FormItem>
@@ -969,6 +989,21 @@ const ContentManagement = () => {
                               {...field}
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editForm.control}
+                      name="capturePageBannerUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL do Banner da Página de Captura</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://exemplo.com/banner-captura.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>Imagem principal exibida na página de captura</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

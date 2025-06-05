@@ -372,12 +372,12 @@ const FormPage = () => {
           {/* Left column - Content presentation */}
           <div className="space-y-6">
             <h1 className="text-3xl font-bold mb-2">{content.capture_page_title || content.titulo}</h1>
-            <p className="text-gray-600 mb-4">{content.capture_page_description || content.descricao}</p>
+            <p className="text-gray-600 mb-4 whitespace-pre-wrap">{content.capture_page_description || content.descricao}</p>
             
             {/* Featured image */}
             <div className="aspect-video w-full overflow-hidden rounded-lg mb-6">
               <img 
-                src={content.thumbnail} 
+                src={content.capture_page_banner_url || content.thumbnail_url} 
                 alt={content.capture_page_title || content.titulo} 
                 className="w-full h-full object-cover"
               />

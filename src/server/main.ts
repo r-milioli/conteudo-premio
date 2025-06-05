@@ -392,6 +392,7 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
             bannerImageUrl,
             capturePageTitle,
             capturePageDescription,
+            capturePageBannerUrl,
             capturePageVideoUrl,
             capturePageHtml,
             deliveryPageTitle,
@@ -414,6 +415,7 @@ app.post('/api/contents', authenticateToken, async (req: Request, res: Response)
             banner_image_url: bannerImageUrl,
             capture_page_title: capturePageTitle,
             capture_page_description: capturePageDescription,
+            capture_page_banner_url: capturePageBannerUrl,
             capture_page_video_url: capturePageVideoUrl,
             capture_page_html: capturePageHtml,
             delivery_page_title: deliveryPageTitle,
@@ -451,6 +453,7 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             bannerImageUrl,
             capturePageTitle,
             capturePageDescription,
+            capturePageBannerUrl,
             capturePageVideoUrl,
             capturePageHtml,
             deliveryPageTitle,
@@ -458,7 +461,7 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             deliveryPageVideoUrl,
             deliveryPageHtml,
             downloadLink,
-            slug: customSlug // Novo parâmetro opcional para slug customizado
+            slug: customSlug
         } = req.body;
 
         const contentRepository = AppDataSource.getRepository(Content);
@@ -471,16 +474,12 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
         // Se o título mudou e não foi fornecido um slug customizado, gera um novo
         let newSlug = content.slug;
         if (customSlug) {
-            // Se foi fornecido um slug customizado, valida e usa ele
             newSlug = await generateUniqueSlug(customSlug, contentRepository, content.id);
         } else if (title !== content.title) {
-            // Se o título mudou e não foi fornecido slug, gera um novo baseado no título
             newSlug = await generateUniqueSlug(title, contentRepository, content.id);
         }
 
-        // Mapeia corretamente os campos de camelCase para snake_case
-        const updatedContent = {
-            ...content,
+        Object.assign(content, {
             title,
             description,
             slug: newSlug,
@@ -488,17 +487,17 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             banner_image_url: bannerImageUrl,
             capture_page_title: capturePageTitle,
             capture_page_description: capturePageDescription,
+            capture_page_banner_url: capturePageBannerUrl,
             capture_page_video_url: capturePageVideoUrl,
             capture_page_html: capturePageHtml,
             delivery_page_title: deliveryPageTitle,
             delivery_page_description: deliveryPageDescription,
             delivery_page_video_url: deliveryPageVideoUrl,
             delivery_page_html: deliveryPageHtml,
-            download_link: downloadLink,
-            updated_at: new Date()
-        };
+            download_link: downloadLink
+        });
 
-        await contentRepository.save(updatedContent);
+        await contentRepository.save(content);
         
         await WebhookService.createEvent('content_updated', {
             content_id: content.id,
@@ -507,7 +506,7 @@ app.put('/api/contents/:id', authenticateToken, async (req: Request, res: Respon
             status: content.status,
         });
         
-        res.json(updatedContent);
+        res.json(content);
     } catch (error) {
         console.error('Erro ao atualizar conteúdo:', error);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -619,6 +618,7 @@ app.get('/api/public/contents/:slug/form', async (req: Request, res: Response) =
                 'banner_image_url',
                 'capture_page_title',
                 'capture_page_description',
+                'capture_page_banner_url',
                 'capture_page_video_url',
                 'capture_page_html'
             ]
@@ -636,6 +636,7 @@ app.get('/api/public/contents/:slug/form', async (req: Request, res: Response) =
             thumbnail: content.thumbnail_url,
             capture_page_title: content.capture_page_title,
             capture_page_description: content.capture_page_description,
+            capture_page_banner_url: content.capture_page_banner_url,
             capture_page_video_url: content.capture_page_video_url,
             capture_page_html: content.capture_page_html
         });

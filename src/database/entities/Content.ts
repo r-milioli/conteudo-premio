@@ -31,6 +31,9 @@ export class Content {
     capture_page_description: string;
 
     @Column({ type: "text", nullable: true })
+    capture_page_banner_url: string;
+
+    @Column({ type: "text", nullable: true })
     capture_page_video_url: string;
 
     @Column({ type: "text", nullable: true })

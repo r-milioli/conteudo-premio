@@ -147,7 +147,7 @@ const DeliveryPage = () => {
         )}
         <div className="p-6">
           <h2 className="text-2xl font-bold mb-4">{content.delivery_page_title || content.titulo}</h2>
-          <p className="text-gray-600 mb-6">{content.delivery_page_description || content.descricao}</p>
+          <p className="text-gray-600 mb-6 whitespace-pre-wrap">{content.delivery_page_description || content.descricao}</p>
           
           {/* Video player se existir */}
           {content.delivery_page_video_url && (
