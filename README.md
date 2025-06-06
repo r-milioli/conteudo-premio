@@ -12,6 +12,15 @@ O Content Contribution Hub é uma plataforma full-stack desenvolvida para criado
   - Sistema de avaliações e feedback
   - Métricas de acesso e downloads
 
+- **Gerenciamento de Mídia**
+  - Upload e armazenamento de imagens
+  - Visualização em grid de todas as mídias
+  - Pesquisa de arquivos por nome
+  - Compartilhamento fácil via URL
+  - Integração com MinIO Storage
+  - Limite de 5MB por arquivo
+  - Suporte apenas para imagens
+
 ### Para Usuários
 - **Acesso ao Conteúdo**
   - Download de materiais com contribuição opcional
@@ -29,6 +38,7 @@ O Content Contribution Hub é uma plataforma full-stack desenvolvida para criado
   - Mercado Pago (Cartão e PIX)
   - Sistema de webhooks para integrações externas
   - SMTP para envio de emails
+  - MinIO para armazenamento de mídia
 
 ## 🛠 Tecnologias
 
@@ -91,6 +101,15 @@ SMTP_PORT=587
 SMTP_USERNAME=seu_usuario
 SMTP_PASSWORD=sua_senha
 SMTP_FROM="Nome"<email@dominio.com>
+
+# Configurações do MinIO Storage
+MINIO_ENDPOINT=seu_endpoint_minio
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=sua_access_key
+MINIO_SECRET_KEY=sua_secret_key
+MINIO_USE_SSL=false
+MINIO_BUCKET=media
+MINIO_PUBLIC_URL=http://seu_endpoint_minio:9000
 ```
 
 5. Execute as migrações do banco de dados:
