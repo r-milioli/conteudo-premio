@@ -30,6 +30,8 @@ import SiteSettings from "./pages/admin/SiteSettings";
 import Reviews from "./pages/admin/Reviews";
 import ForgotPassword from "./pages/admin/ForgotPassword";
 import ResetPassword from "./pages/admin/ResetPassword";
+import MediaManagement from './pages/admin/MediaManagement';
+import UserManagement from './pages/admin/UserManagement';
 
 const queryClient = new QueryClient();
 
@@ -60,9 +62,11 @@ const App = () => (
             <Route element={<AdminLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="contents" element={<ContentManagement />} />
+              <Route path="media" element={<MediaManagement />} />
               <Route path="reviews" element={<Reviews />} />
               <Route path="reports" element={<Reports />} />
               <Route path="settings" element={<SiteSettings />} />
+              <Route path="users" element={<UserManagement />} />
             </Route>
           </Route>
         </Routes>

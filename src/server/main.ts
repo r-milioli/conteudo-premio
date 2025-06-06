@@ -17,6 +17,9 @@ import { EmailService } from '../services/email/email-service.js';
 import { SmtpEmailProvider } from '../services/email/providers/smtp-provider.js';
 import slugify from 'slugify';
 import { Not } from "typeorm";
+import { minioService } from '../services/storage/minio-service.js';
+import multer from 'multer';
+import crypto from 'crypto';
 
 // Load environment variables
 config();
@@ -1091,6 +1094,79 @@ app.post('/api/webhooks/:event', async (req: Request, res: Response) => {
     }
 });
 
+// Configuração do multer para upload de arquivos
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas imagens são permitidas'));
+    }
+  },
+});
+
+// Endpoint para verificar status do storage
+app.get('/api/media/status', async (_req: Request, res: Response) => {
+  try {
+    const status = await minioService.getStatus();
+    res.json(status);
+  } catch (error) {
+    console.error('Erro ao verificar status do storage:', error);
+    res.status(500).json({ error: 'Erro ao verificar status do storage' });
+  }
+});
+
+// Endpoint para listar arquivos
+app.get('/api/media/files', async (_req: Request, res: Response) => {
+  try {
+    const files = await minioService.listFiles();
+    res.json(files);
+  } catch (error) {
+    console.error('Erro ao listar arquivos:', error);
+    res.status(500).json({ error: 'Erro ao listar arquivos' });
+  }
+});
+
+// Endpoint para upload de arquivo
+app.post('/api/media/upload', upload.single('file'), async (req: Request & { file?: Express.Multer.File }, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    const file = req.file;
+    const fileExtension = file.originalname.split('.').pop();
+    const fileName = `${crypto.randomBytes(16).toString('hex')}.${fileExtension}`;
+
+    const url = await minioService.uploadFile(
+      file.buffer,
+      fileName,
+      file.mimetype
+    );
+
+    res.json({ url, fileName });
+  } catch (error) {
+    console.error('Erro ao fazer upload do arquivo:', error);
+    res.status(500).json({ error: 'Erro ao fazer upload do arquivo' });
+  }
+});
+
+// Endpoint para deletar arquivo
+app.delete('/api/media/files/:fileName', async (req: Request, res: Response) => {
+  try {
+    const { fileName } = req.params;
+    await minioService.deleteFile(fileName);
+    res.status(204).send();
+  } catch (error) {
+    console.error('Erro ao deletar arquivo:', error);
+    res.status(500).json({ error: 'Erro ao deletar arquivo' });
+  }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
@@ -1704,4 +1780,4 @@ app.listen(port, () => {
 });
 
 // Inicializa o processador de webhooks
-WebhookProcessor.start(); 
+WebhookProcessor.start();

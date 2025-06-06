@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, Settings, Users, MessageSquare } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, Users, MessageSquare, Image } from "lucide-react";
 
 const menuItems = [
     {
@@ -10,6 +10,11 @@ const menuItems = [
         title: "Conteúdos",
         href: "/admin/conteudos",
         icon: FileText
+    },
+    {
+        title: "Mídia",
+        href: "/admin/media",
+        icon: Image
     },
     {
         title: "Avaliações",
